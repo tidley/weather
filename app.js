@@ -1,3 +1,5 @@
+console.log('APP.JS VERSION:', '2026-01-14-php-tides-1');
+
 const config = {
   locationName: 'St Leonards-on-Sea, UK',
   latitude: 50.849533,
@@ -65,6 +67,10 @@ const formatTideTime = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
   minute: '2-digit',
 });
+
+function setLocation() {
+  if (ui.locationName) ui.locationName.textContent = config.locationName;
+}
 
 function windCompass(degrees) {
   if (degrees === null || degrees === undefined) return '—';
@@ -1252,4 +1258,3 @@ const hasCache = renderFromCache();
 if (!hasCache) {
   loadForecast({ force: false });
 }
-
