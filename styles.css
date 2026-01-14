@@ -227,6 +227,35 @@ h2 {
   gap: 8px;
 }
 
+.tide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tide-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 70px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(28, 27, 25, 0.1);
+  font-size: 0.95rem;
+}
+
+.tide-row:last-child {
+  border-bottom: none;
+}
+
+.tide-type {
+  font-weight: 600;
+}
+
+.tide-height {
+  text-align: right;
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+
 .tide-empty {
   margin: 0;
   font-weight: 600;

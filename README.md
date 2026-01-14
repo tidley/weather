@@ -23,4 +23,12 @@ Edit the `config` block in `app.js`:
 - `timezone`
 - `windSpeedUnit` (use `kn` for knots)
 
-Tide data is left as a manual placeholder for now; add your provider details when ready.
+## Tides (RSS)
+
+The tide card pulls from an RSS feed by default. Update the feed in `app.js`:
+
+- `config.tide.rssUrl` (RSS feed URL)
+- `config.tide.sourceUrl` (link for the “Tide source” button)
+- `config.tide.corsProxy` (optional; some RSS feeds block browser requests)
+
+If the feed blocks CORS, set `corsProxy` to a compatible proxy prefix that accepts a URL query.

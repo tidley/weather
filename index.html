@@ -48,12 +48,12 @@
       <article class="card tides" id="tides-card">
         <div class="card-header">
           <h2>Tides</h2>
-          <span class="pill">Manual</span>
+          <span class="pill" id="tide-source">RSS</span>
         </div>
         <div class="tide-body" id="tides-body">
-          <p class="tide-empty">No tide feed configured.</p>
-          <p class="tide-hint">Add your provider details in <code>app.js</code>.</p>
-          <a class="link" id="tide-link" href="https://admiraltyapi.portal.azure-api.net/" target="_blank" rel="noopener">UKHO Discovery portal</a>
+          <p class="tide-empty" id="tide-status">Loading tide feed…</p>
+          <div class="tide-list" id="tide-list"></div>
+          <a class="link" id="tide-link" href="https://www.tidetimes.org.uk/hastings-tide-times" target="_blank" rel="noopener">Tide source</a>
         </div>
       </article>
 

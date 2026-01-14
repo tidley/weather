@@ -5,9 +5,10 @@ const config = {
   timezone: "Europe/London",
   windSpeedUnit: "kn",
   tide: {
-    provider: null,
-    apiKey: "",
-    stationId: "",
+    provider: "rss",
+    rssUrl: "https://www.tidetimes.org.uk/hastings-tide-times.rss",
+    sourceUrl: "https://www.tidetimes.org.uk/hastings-tide-times",
+    corsProxy: "",
   },
 };
 
@@ -25,6 +26,10 @@ const ui = {
   hourlyWindow: document.getElementById("hourly-window"),
   dailyList: document.getElementById("daily-list"),
   dailySummary: document.getElementById("daily-summary"),
+  tideStatus: document.getElementById("tide-status"),
+  tideList: document.getElementById("tide-list"),
+  tideSource: document.getElementById("tide-source"),
+  tideLink: document.getElementById("tide-link"),
   refresh: document.getElementById("refresh"),
 };
 
@@ -39,6 +44,11 @@ const formatDay = new Intl.DateTimeFormat("en-GB", {
 
 const formatDateTime = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const formatTideTime = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit",
   minute: "2-digit",
 });
@@ -120,6 +130,15 @@ function setLoadingState() {
   ui.lastUpdated.textContent = "Fetching latest data…";
 }
 
+function setTideStatus(message) {
+  ui.tideStatus.textContent = message;
+  ui.tideStatus.style.display = "block";
+}
+
+function clearTideStatus() {
+  ui.tideStatus.style.display = "none";
+}
+
 function renderCurrent(data) {
   const current = data.current;
   ui.currentTemp.textContent = formatValue(current.temperature_2m, "°C");
@@ -198,6 +217,112 @@ function renderDaily(data) {
   ui.dailySummary.textContent = `Max ${Math.round(maxWind)} kt`;
 }
 
+function extractHeight(text) {
+  if (!text) return null;
+  const match = text.match(/([0-9]+(?:\\.[0-9]+)?)\\s?m/i);
+  if (!match) return null;
+  return `${match[1]} m`;
+}
+
+function extractTime(text) {
+  if (!text) return null;
+  const match = text.match(/\\b([01]?\\d|2[0-3]):[0-5]\\d\\b/);
+  if (!match) return null;
+  return match[0];
+}
+
+function parseTideItems(xmlDoc) {
+  const items = Array.from(xmlDoc.querySelectorAll("item"));
+  return items.map((item) => {
+    const title = item.querySelector("title")?.textContent?.trim() ?? "";
+    const description =
+      item.querySelector("description")?.textContent?.trim() ?? "";
+    const pubDateText = item.querySelector("pubDate")?.textContent?.trim() ?? "";
+    const pubDate = pubDateText ? new Date(pubDateText) : null;
+    const typeMatch = title.match(/\\b(High|Low)\\b/i);
+    const type = typeMatch ? typeMatch[1].toUpperCase() : "TIDE";
+    const height =
+      extractHeight(title) ?? extractHeight(description) ?? "—";
+    const timeText =
+      (pubDate && !Number.isNaN(pubDate.getTime())
+        ? formatTideTime.format(pubDate)
+        : null) ||
+      extractTime(title) ||
+      extractTime(description) ||
+      "—";
+
+    return {
+      title,
+      type,
+      height,
+      timeText,
+      date: pubDate && !Number.isNaN(pubDate.getTime()) ? pubDate : null,
+    };
+  });
+}
+
+function renderTides(items) {
+  ui.tideList.innerHTML = "";
+  if (!items.length) {
+    setTideStatus("No tide items found.");
+    return;
+  }
+
+  const now = new Date();
+  const upcoming = items
+    .filter((item) => !item.date || item.date >= now)
+    .sort((a, b) => {
+      if (!a.date || !b.date) return 0;
+      return a.date - b.date;
+    })
+    .slice(0, 6);
+
+  const displayItems = upcoming.length ? upcoming : items.slice(0, 6);
+  displayItems.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "tide-row";
+    row.innerHTML = `
+      <div class="tide-time">${item.timeText}</div>
+      <div class="tide-type">${item.type}</div>
+      <div class="tide-height">${item.height}</div>
+    `;
+    ui.tideList.appendChild(row);
+  });
+
+  clearTideStatus();
+}
+
+async function loadTides() {
+  if (config.tide.provider !== "rss" || !config.tide.rssUrl) {
+    setTideStatus("No tide feed configured.");
+    ui.tideSource.textContent = "Manual";
+    return;
+  }
+
+  ui.tideSource.textContent = "RSS";
+  if (config.tide.sourceUrl) {
+    ui.tideLink.href = config.tide.sourceUrl;
+  }
+
+  const rssUrl = config.tide.corsProxy
+    ? `${config.tide.corsProxy}${encodeURIComponent(config.tide.rssUrl)}`
+    : config.tide.rssUrl;
+
+  try {
+    const response = await fetch(rssUrl);
+    if (!response.ok) {
+      throw new Error(`Tide RSS error: ${response.status}`);
+    }
+    const text = await response.text();
+    const xmlDoc = new DOMParser().parseFromString(text, "text/xml");
+    const items = parseTideItems(xmlDoc);
+    renderTides(items);
+  } catch (error) {
+    setTideStatus("Tide feed blocked or unavailable.");
+    console.error(error);
+  }
+}
+
 function setLocation() {
   ui.locationName.textContent = config.locationName;
 }
@@ -232,6 +357,8 @@ async function loadForecast() {
   } catch (error) {
     handleError(error);
   }
+
+  loadTides();
 }
 
 ui.refresh.addEventListener("click", () => {
