@@ -10,7 +10,7 @@ const config = {
     provider: 'ukho',
     stationId: '0085',
     sourceUrl: 'https://admiraltyapi.portal.azure-api.net/',
-    apiUrl: '/api/tides.php',
+    apiUrl: '/tides.php',
   },
 };
 
@@ -385,7 +385,7 @@ async function loadTides(options = {}) {
     ui.tideLink.href = config.tide.sourceUrl;
   }
 
-  const url = new URL(config.tide.apiUrl);
+  const url = new URL(config.tide.apiUrl, window.location.origin);
   url.searchParams.set('station', config.tide.stationId);
   url.searchParams.set('refresh', options.force ? '1' : '0');
 
@@ -1175,8 +1175,9 @@ function renderFromCache() {
   const cached = loadCache();
   if (!cached) {
     ui.lastUpdated.textContent = 'No cached data yet. Loading from network…';
-    return;
+    return false;
   }
+
   renderCurrent(cached.weather);
   renderForecast(cached.weather, cached.tides);
   setTideStatus('');
@@ -1192,30 +1193,9 @@ function renderFromCache() {
       .catch((error) => {
         console.error(error);
       });
-    return;
   }
 
-  const tideDays = new Set(
-    cached.tides
-      .map((event) => event.date)
-      .filter(Boolean)
-      .map((date) => date.toDateString()),
-  );
-  if (tideDays.size < 6) {
-    loadTides({ force: true })
-      .then((tides) => {
-        if (!tides.length) return;
-        renderForecast(cached.weather, tides);
-        saveCache(cached.weather, tides);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  }
-}
-
-function setLocation() {
-  ui.locationName.textContent = config.locationName;
+  return true;
 }
 
 function setLastUpdated() {
@@ -1236,14 +1216,16 @@ function handleError(error) {
   console.error(error);
 }
 
-async function loadForecast() {
+async function loadForecast(options = {}) {
+  const force = options.force === true;
+
   setLoadingState();
   setLocation();
 
   try {
     const [weatherResponse, tideEvents] = await Promise.all([
       fetch(buildUrl()),
-      loadTides({ force: true }),
+      loadTides({ force }),
     ]);
     if (!weatherResponse.ok) {
       throw new Error(`Open-Meteo error: ${weatherResponse.status}`);
@@ -1261,9 +1243,13 @@ async function loadForecast() {
 
 if (ui.refresh) {
   ui.refresh.addEventListener('click', () => {
-    loadForecast();
+    loadForecast({ force: true });
   });
 }
 
 setLocation();
-renderFromCache();
+const hasCache = renderFromCache();
+if (!hasCache) {
+  loadForecast({ force: false });
+}
+
