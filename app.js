@@ -1,14 +1,14 @@
 const config = {
-  locationName: "Hayling Island, UK",
-  latitude: 50.783,
-  longitude: -0.975,
+  locationName: "St Leonards-on-Sea, UK",
+  latitude: 50.849533,
+  longitude: 0.537056,
   timezone: "Europe/London",
   windSpeedUnit: "kn",
   tide: {
     provider: "rss",
     rssUrl: "https://www.tidetimes.org.uk/hastings-tide-times.rss",
     sourceUrl: "https://www.tidetimes.org.uk/hastings-tide-times",
-    corsProxy: "",
+    corsProxy: "https://api.allorigins.win/raw?url=",
   },
 };
 
