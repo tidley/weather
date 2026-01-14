@@ -386,9 +386,6 @@ async function loadTides(options = {}) {
   if (ui.tideSource) {
     ui.tideSource.textContent = 'UKHO';
   }
-  if (config.tide.sourceUrl) {
-    ui.tideLink.href = config.tide.sourceUrl;
-  }
 
   const url = new URL(config.tide.apiUrl, window.location.origin);
   url.searchParams.set('station', config.tide.stationId);
