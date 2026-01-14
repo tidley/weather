@@ -438,19 +438,6 @@ h2 {
   font-size: 0.9rem;
 }
 
-.link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #cfe4ff;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.link::after {
-  content: "→";
-  color: var(--sun);
-}
 
 .ambient {
   position: fixed;
@@ -475,21 +462,79 @@ h2 {
 }
 
 @media (max-width: 720px) {
+  .app {
+    padding: 18px 3vw 28px;
+  }
+
   .topbar {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .ghost {
-    width: 100%;
-    text-align: center;
+  .current-stats {
+    grid-template-columns: repeat(2, minmax(110px, 1fr));
+    gap: 10px;
+  }
+
+  .card {
+    padding: 14px 12px;
+    border-radius: 16px;
+  }
+
+  h1 {
+    font-size: clamp(1.2rem, 5.4vw, 2rem);
+  }
+
+  .value {
+    font-size: 1.2rem;
+  }
+
+  .label {
+    font-size: 0.72rem;
   }
 
   .label-cell {
-    min-width: 96px;
+    min-width: 64px;
+    font-size: 0.65rem;
   }
 
   .data-cell {
-    min-width: 56px;
+    min-width: 52px;
+  }
+
+  .forecast-grid th,
+  .forecast-grid td {
+    padding: 4px 4px;
+  }
+
+  .forecast-grid {
+    font-size: 0.7rem;
+  }
+
+  .forecast-scroll {
+    margin: 0 -4vw;
+    padding: 0 4vw 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cell-main {
+    font-size: 0.8rem;
+  }
+
+  .cell-sub {
+    font-size: 0.6rem;
+  }
+
+  .ki-stars {
+    font-size: 0.9rem;
+  }
+
+  .arrow {
+    width: 14px;
+  }
+
+  .arrow::after {
+    right: -5px;
+    border-width: 5px;
   }
 }
