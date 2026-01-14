@@ -1,0 +1,9 @@
+{
+  "name": "forecast",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
