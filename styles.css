@@ -34,8 +34,8 @@ body {
   position: relative;
   z-index: 2;
   padding: 32px 5vw 60px;
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
 .topbar {
@@ -164,6 +164,16 @@ h2 {
   margin-bottom: 20px;
 }
 
+.current {
+  max-width: 1040px;
+  margin: 0;
+}
+
+.score-value {
+  color: #f7c948;
+  letter-spacing: 2px;
+}
+
 .forecast {
   gap: 14px;
 }
@@ -182,7 +192,6 @@ h2 {
 .forecast-grid {
   border-collapse: collapse;
   width: max-content;
-  min-width: 100%;
   font-size: 0.85rem;
 }
 
@@ -233,11 +242,13 @@ h2 {
 .cell-main {
   font-weight: 600;
   color: var(--ink);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 .cell-sub {
   color: var(--muted);
   font-size: 0.72rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 .wind-cell {
@@ -249,6 +260,30 @@ h2 {
 
 .wind-cell .cell-main {
   color: #f3f7ff;
+}
+
+.score-0 .cell-main {
+  color: var(--muted);
+}
+
+.score-1 .cell-main,
+.score-2 .cell-main,
+.score-3 .cell-main {
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  color: #f7c948;
+}
+
+.score-1 {
+  background: rgba(78, 161, 255, 0.08);
+}
+
+.score-2 {
+  background: rgba(78, 161, 255, 0.16);
+}
+
+.score-3 {
+  background: rgba(78, 161, 255, 0.24);
 }
 
 .tide-chart {
@@ -270,7 +305,7 @@ h2 {
 }
 
 .tide-label {
-  font-size: 10px;
+  font-size: 12px;
   fill: var(--ink);
 }
 

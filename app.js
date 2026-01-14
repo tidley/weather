@@ -1,95 +1,96 @@
 const config = {
-  locationName: "St Leonards-on-Sea, UK",
+  locationName: 'St Leonards-on-Sea, UK',
   latitude: 50.849533,
   longitude: 0.537056,
-  timezone: "Europe/London",
-  windSpeedUnit: "kn",
+  timezone: 'Europe/London',
+  windSpeedUnit: 'kn',
   forecastWindowHours: 2,
   forecastDays: 7,
   tide: {
-    provider: "ukho",
-    stationId: "0085",
-    sourceUrl: "https://admiraltyapi.portal.azure-api.net/",
-    apiUrl: "http://localhost:8787/tides",
+    provider: 'ukho',
+    stationId: '0085',
+    sourceUrl: 'https://admiraltyapi.portal.azure-api.net/',
+    apiUrl: 'http://localhost:8787/tides',
   },
 };
 
 const ui = {
-  locationName: document.getElementById("location-name"),
-  lastUpdated: document.getElementById("last-updated"),
-  currentSummary: document.getElementById("current-summary"),
-  currentTemp: document.getElementById("current-temp"),
-  currentWind: document.getElementById("current-wind"),
-  currentWindDir: document.getElementById("current-wind-dir"),
-  currentGusts: document.getElementById("current-gusts"),
-  currentPrecip: document.getElementById("current-precip"),
-  currentCloud: document.getElementById("current-cloud"),
-  forecastGrid: document.getElementById("forecast-grid"),
-  forecastHeadRow: document.getElementById("forecast-head-row"),
-  forecastBody: document.getElementById("forecast-body"),
-  forecastRange: document.getElementById("forecast-range"),
-  tideStatus: document.getElementById("tide-status"),
-  tideSource: document.getElementById("tide-source"),
-  tideLink: document.getElementById("tide-link"),
-  tideSvg: document.getElementById("tide-svg"),
-  refresh: document.getElementById("refresh"),
+  locationName: document.getElementById('location-name'),
+  lastUpdated: document.getElementById('last-updated'),
+  currentSummary: document.getElementById('current-summary'),
+  currentTemp: document.getElementById('current-temp'),
+  currentWind: document.getElementById('current-wind'),
+  currentWindDir: document.getElementById('current-wind-dir'),
+  currentGusts: document.getElementById('current-gusts'),
+  currentPrecip: document.getElementById('current-precip'),
+  currentCloud: document.getElementById('current-cloud'),
+  currentScore: document.getElementById('current-score'),
+  forecastGrid: document.getElementById('forecast-grid'),
+  forecastHeadRow: document.getElementById('forecast-head-row'),
+  forecastBody: document.getElementById('forecast-body'),
+  forecastRange: document.getElementById('forecast-range'),
+  tideStatus: document.getElementById('tide-status'),
+  tideSource: document.getElementById('tide-source'),
+  tideLink: document.getElementById('tide-link'),
+  tideSvg: document.getElementById('tide-svg'),
+  refresh: document.getElementById('refresh'),
 };
 
 const cacheKeys = {
-  weather: "forecast.weather",
-  tides: "forecast.tides",
-  updated: "forecast.updated",
+  weather: 'forecast.weather',
+  tides: 'forecast.tides',
+  updated: 'forecast.updated',
 };
 
-const formatWindow = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  day: "2-digit",
-  month: "short",
-  hour: "2-digit",
+const formatWindow = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'short',
+  day: '2-digit',
+  month: 'short',
+  hour: '2-digit',
 });
 
-const formatHeaderDay = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
+const formatHeaderDay = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'short',
 });
 
-const formatHeaderDate = new Intl.DateTimeFormat("en-GB", {
-  day: "2-digit",
+const formatHeaderDate = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
 });
 
-const formatHeaderHour = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
+const formatHeaderHour = new Intl.DateTimeFormat('en-GB', {
+  hour: '2-digit',
 });
 
-const formatTideTime = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
-  minute: "2-digit",
+const formatTideTime = new Intl.DateTimeFormat('en-GB', {
+  hour: '2-digit',
+  minute: '2-digit',
 });
 
 function windCompass(degrees) {
-  if (degrees === null || degrees === undefined) return "—";
+  if (degrees === null || degrees === undefined) return '—';
   const directions = [
-    "N",
-    "NNE",
-    "NE",
-    "ENE",
-    "E",
-    "ESE",
-    "SE",
-    "SSE",
-    "S",
-    "SSW",
-    "SW",
-    "WSW",
-    "W",
-    "WNW",
-    "NW",
-    "NNW",
+    'N',
+    'NNE',
+    'NE',
+    'ENE',
+    'E',
+    'ESE',
+    'SE',
+    'SSE',
+    'S',
+    'SSW',
+    'SW',
+    'WSW',
+    'W',
+    'WNW',
+    'NW',
+    'NNW',
   ];
   const index = Math.round(degrees / 22.5) % 16;
   return directions[index];
 }
 
-function formatValue(value, unit, fallback = "—") {
+function formatValue(value, unit, fallback = '—') {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return fallback;
   }
@@ -97,13 +98,13 @@ function formatValue(value, unit, fallback = "—") {
 }
 
 function arrowForDegrees(degrees) {
-  if (degrees === null || degrees === undefined) return "rotate(0deg)";
+  if (degrees === null || degrees === undefined) return 'rotate(0deg)';
   return `rotate(${(degrees + 90) % 360}deg)`;
 }
 
 function colorForValue(value, stops) {
   if (value === null || value === undefined || Number.isNaN(value)) {
-    return "transparent";
+    return 'transparent';
   }
   const sorted = [...stops].sort((a, b) => a.value - b.value);
   let chosen = sorted[0];
@@ -113,10 +114,56 @@ function colorForValue(value, stops) {
   return chosen.color;
 }
 
+function hexToRgb(hex) {
+  const sanitized = hex.replace('#', '');
+  const value =
+    sanitized.length === 3
+      ? sanitized
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : sanitized;
+  const number = Number.parseInt(value, 16);
+  return [(number >> 16) & 255, (number >> 8) & 255, number & 255];
+}
+
+function lerpColor(start, end, t) {
+  const clamped = Math.max(0, Math.min(1, t));
+  const [r1, g1, b1] = hexToRgb(start);
+  const [r2, g2, b2] = hexToRgb(end);
+  const r = Math.round(r1 + (r2 - r1) * clamped);
+  const g = Math.round(g1 + (g2 - g1) * clamped);
+  const b = Math.round(b1 + (b2 - b1) * clamped);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function timeGradient(time) {
+  const hour = time.getHours() + time.getMinutes() / 60;
+  const t = hour <= 12 ? hour / 12 : (24 - hour) / 12;
+  return lerpColor('#081420', '#1e4e9c', t);
+}
+
 function parseHeightNumber(value) {
   if (!value) return null;
   const number = Number.parseFloat(String(value));
   return Number.isNaN(number) ? null : number;
+}
+
+function skyIcon(cloudCover, time) {
+  if (
+    cloudCover === null ||
+    cloudCover === undefined ||
+    Number.isNaN(cloudCover)
+  ) {
+    return '—';
+  }
+  const hour = time ? time.getHours() : 12;
+  const isNight = hour < 6 || hour >= 20;
+
+  if (cloudCover < 20) return isNight ? '🌕' : '☀️';
+  if (cloudCover < 50) return isNight ? '🌙' : '⛅';
+  if (cloudCover < 80) return isNight ? '☁️🌙' : '🌥️';
+  return '☁️';
 }
 
 function buildUrl() {
@@ -126,22 +173,22 @@ function buildUrl() {
     timezone: config.timezone,
     wind_speed_unit: config.windSpeedUnit,
     current: [
-      "temperature_2m",
-      "precipitation",
-      "cloud_cover",
-      "wind_speed_10m",
-      "wind_direction_10m",
-      "wind_gusts_10m",
-    ].join(","),
+      'temperature_2m',
+      'precipitation',
+      'cloud_cover',
+      'wind_speed_10m',
+      'wind_direction_10m',
+      'wind_gusts_10m',
+    ].join(','),
     hourly: [
-      "temperature_2m",
-      "precipitation_probability",
-      "precipitation",
-      "wind_speed_10m",
-      "wind_direction_10m",
-      "wind_gusts_10m",
-      "cloud_cover",
-    ].join(","),
+      'temperature_2m',
+      'precipitation_probability',
+      'precipitation',
+      'wind_speed_10m',
+      'wind_direction_10m',
+      'wind_gusts_10m',
+      'cloud_cover',
+    ].join(','),
   });
 
   return `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
@@ -149,41 +196,42 @@ function buildUrl() {
 
 function setLoadingState() {
   if (ui.currentSummary) {
-    ui.currentSummary.textContent = "Refreshing";
+    ui.currentSummary.textContent = 'Refreshing';
   }
-  ui.lastUpdated.textContent = "Fetching latest data…";
+  ui.lastUpdated.textContent = 'Fetching latest data…';
 }
 
 function setCachedUpdated(timestamp) {
   if (!timestamp) return;
-  ui.lastUpdated.textContent = `Updated ${new Date(timestamp).toLocaleTimeString(
-    "en-GB",
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  )} (cached)`;
+  ui.lastUpdated.textContent = `Updated ${new Date(
+    timestamp,
+  ).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })} (cached)`;
 }
 
 function setTideStatus(message) {
   if (!ui.tideStatus) return;
   ui.tideStatus.textContent = message;
-  ui.tideStatus.style.display = "block";
+  ui.tideStatus.style.display = 'block';
 }
 
 function clearTideStatus() {
   if (!ui.tideStatus) return;
-  ui.tideStatus.style.display = "none";
+  ui.tideStatus.style.display = 'none';
 }
 
 function renderCurrent(data) {
   const current = data.current;
-  ui.currentTemp.textContent = formatValue(current.temperature_2m, "°C");
-  ui.currentWind.textContent = formatValue(current.wind_speed_10m, " kt");
-  ui.currentWindDir.textContent = `${windCompass(current.wind_direction_10m)} wind`;
-  ui.currentGusts.textContent = formatValue(current.wind_gusts_10m, " kt");
-  ui.currentPrecip.textContent = formatValue(current.precipitation, " mm");
-  ui.currentCloud.textContent = formatValue(current.cloud_cover, "% cloud");
+  ui.currentTemp.textContent = formatValue(current.temperature_2m, '°C');
+  ui.currentWind.textContent = formatValue(current.wind_speed_10m, ' kt');
+  ui.currentWindDir.textContent = `${windCompass(
+    current.wind_direction_10m,
+  )} wind`;
+  ui.currentGusts.textContent = formatValue(current.wind_gusts_10m, ' kt');
+  ui.currentPrecip.textContent = formatValue(current.precipitation, ' mm');
+  ui.currentCloud.textContent = formatValue(current.cloud_cover, '% cloud');
 
   const wind = Math.round(current.wind_speed_10m);
   const gusts = Math.round(current.wind_gusts_10m);
@@ -195,16 +243,16 @@ function renderCurrent(data) {
 
 function formatHeight(value) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return "—";
+    return '—';
   }
   return `${Number(value).toFixed(2)} m`;
 }
 
 function normalizeEventType(rawType) {
-  if (!rawType) return "TIDE";
+  if (!rawType) return 'TIDE';
   const value = String(rawType).toLowerCase();
-  if (value.includes("high")) return "HIGH";
-  if (value.includes("low")) return "LOW";
+  if (value.includes('high')) return 'HIGH';
+  if (value.includes('low')) return 'LOW';
   return value.toUpperCase();
 }
 
@@ -212,10 +260,10 @@ function parseUkhOEvents(data) {
   const items = Array.isArray(data)
     ? data
     : Array.isArray(data?.items)
-      ? data.items
-      : Array.isArray(data?.data)
-        ? data.data
-        : [];
+    ? data.items
+    : Array.isArray(data?.data)
+    ? data.data
+    : [];
 
   return items
     .map((item) => {
@@ -228,14 +276,14 @@ function parseUkhOEvents(data) {
         item.time;
       const date = dateText ? new Date(dateText) : null;
       const type = normalizeEventType(
-        item.EventType || item.eventType || item.Type || item.type
+        item.EventType || item.eventType || item.Type || item.type,
       );
       const height = formatHeight(
         item.Height ||
           item.height ||
           item.HeightInMeters ||
           item.heightInMeters ||
-          item.Value
+          item.Value,
       );
       return {
         type,
@@ -243,36 +291,37 @@ function parseUkhOEvents(data) {
         timeText:
           date && !Number.isNaN(date.getTime())
             ? formatTideTime.format(date)
-            : "—",
+            : '—',
         date: date && !Number.isNaN(date.getTime()) ? date : null,
       };
     })
     .filter((item) => item.date);
 }
 
-async function loadTides() {
-  if (config.tide.provider !== "ukho" || !config.tide.apiUrl) {
-    setTideStatus("No tide feed configured.");
+async function loadTides(options = {}) {
+  if (config.tide.provider !== 'ukho' || !config.tide.apiUrl) {
+    setTideStatus('No tide feed configured.');
     if (ui.tideSource) {
-      ui.tideSource.textContent = "Manual";
+      ui.tideSource.textContent = 'Manual';
     }
     return [];
   }
 
   if (ui.tideSource) {
-    ui.tideSource.textContent = "UKHO";
+    ui.tideSource.textContent = 'UKHO';
   }
   if (config.tide.sourceUrl) {
     ui.tideLink.href = config.tide.sourceUrl;
   }
 
   const url = new URL(config.tide.apiUrl);
-  url.searchParams.set("station", config.tide.stationId);
+  url.searchParams.set('station', config.tide.stationId);
+  url.searchParams.set('refresh', options.force ? '1' : '0');
 
   try {
     const response = await fetch(url.toString());
     if (!response.ok) {
-      let details = "";
+      let details = '';
       try {
         const payload = await response.json();
         if (payload?.error) {
@@ -293,7 +342,7 @@ async function loadTides() {
     const items = parseUkhOEvents(data);
     return items;
   } catch (error) {
-    setTideStatus("Tide feed unavailable.");
+    setTideStatus('Tide feed unavailable.');
     console.error(error);
     return [];
   }
@@ -301,43 +350,86 @@ async function loadTides() {
 
 function describeTideCoverage(items) {
   if (!items.length) {
-    return "No tide events returned.";
+    return 'No tide events returned.';
   }
   const sorted = [...items].sort((a, b) => a.date - b.date);
   const start = sorted[0].date;
   const end = sorted[sorted.length - 1].date;
   if (!start || !end) {
-    return "Tide feed loaded, but dates were missing.";
+    return 'Tide feed loaded, but dates were missing.';
   }
-  const days =
-    Math.round((end - start) / (24 * 60 * 60 * 1000)) + 1;
+  const days = Math.round((end - start) / (24 * 60 * 60 * 1000)) + 1;
   return `Tides available for ~${days} days.`;
 }
 
 function tideForWindow(tideEvents, windowStart, windowEnd) {
   const within = tideEvents.filter(
     (event) =>
-      event.date &&
-      event.date >= windowStart &&
-      event.date < windowEnd
+      event.date && event.date >= windowStart && event.date < windowEnd,
   );
-  if (!within.length) return "—";
+  if (!within.length) {
+    const level = tideLevelAt(tideEvents, windowStart);
+    if (!level) return '—';
+    return `${level.height.toFixed(2)}`;
+  }
   return within
     .slice(0, 2)
-    .map((event) => `${event.type[0]} ${event.height}`)
-    .join(", ");
+    .map((event) => {
+      const value = parseHeightNumber(event.height);
+      return value === null
+        ? `${event.type[0]} —`
+        : `${event.type[0]} ${value.toFixed(2)}`;
+    })
+    .join(', ');
+}
+
+function tideLevelAt(tideEvents, time) {
+  const events = tideEvents
+    .filter((event) => event.date)
+    .sort((a, b) => a.date - b.date);
+  if (events.length < 2) return null;
+
+  const nextIndex = events.findIndex((event) => event.date >= time);
+  if (nextIndex === -1) return null;
+  if (nextIndex === 0) {
+    const next = events[0];
+    const after = events[1];
+    const h1 = parseHeightNumber(next.height);
+    const h2 = parseHeightNumber(after.height);
+    if (h1 === null || h2 === null) return null;
+    return {
+      height: h1,
+      lowerHalf: h1 <= (Math.min(h1, h2) + Math.max(h1, h2)) / 2,
+    };
+  }
+  const prev = events[nextIndex - 1];
+  const next = events[nextIndex];
+  const h1 = parseHeightNumber(prev.height);
+  const h2 = parseHeightNumber(next.height);
+  if (h1 === null || h2 === null) return null;
+
+  const segmentMs = next.date - prev.date;
+  const elapsedMs = time - prev.date;
+  const ratio = segmentMs ? Math.min(Math.max(elapsedMs / segmentMs, 0), 1) : 0;
+  const height = h1 + ((h2 - h1) * (1 - Math.cos(Math.PI * ratio))) / 2;
+  const mid = (Math.min(h1, h2) + Math.max(h1, h2)) / 2;
+  return {
+    height,
+    lowerHalf: height <= mid,
+  };
 }
 
 function buildHeaderCell(time) {
-  const cell = document.createElement("th");
-  cell.className = "data-cell";
-  const wrapper = document.createElement("div");
-  wrapper.className = "cell-stack";
-  const day = document.createElement("span");
-  day.className = "cell-main";
+  const cell = document.createElement('th');
+  cell.className = 'data-cell';
+  cell.style.background = timeGradient(time);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'cell-stack';
+  const day = document.createElement('span');
+  day.className = 'cell-main';
   day.textContent = formatHeaderDay.format(time);
-  const hour = document.createElement("span");
-  hour.className = "cell-sub";
+  const hour = document.createElement('span');
+  hour.className = 'cell-sub';
   hour.textContent = formatHeaderDate.format(time);
   wrapper.append(day, hour);
   cell.appendChild(wrapper);
@@ -346,38 +438,38 @@ function buildHeaderCell(time) {
 
 function buildTimeCell(time) {
   const hour = `${formatHeaderHour.format(time)}h`;
-  return buildDataCell(hour, "", "rgba(8, 18, 28, 0.55)");
+  return buildDataCell(hour, '', timeGradient(time));
 }
 
 function buildDataCell(mainText, subText, background) {
-  const cell = document.createElement("td");
-  cell.className = "data-cell";
+  const cell = document.createElement('td');
+  cell.className = 'data-cell';
   if (background) {
     cell.style.background = background;
   }
-  const wrapper = document.createElement("div");
-  wrapper.className = "cell-stack";
-  const main = document.createElement("span");
-  main.className = "cell-main";
+  const wrapper = document.createElement('div');
+  wrapper.className = 'cell-stack';
+  const main = document.createElement('span');
+  main.className = 'cell-main';
   main.textContent = mainText;
-  const sub = document.createElement("span");
-  sub.className = "cell-sub";
-  sub.textContent = subText || "";
+  const sub = document.createElement('span');
+  sub.className = 'cell-sub';
+  sub.textContent = subText || '';
   wrapper.append(main, sub);
   cell.appendChild(wrapper);
   return cell;
 }
 
 function buildDirectionCell(direction, degrees) {
-  const cell = document.createElement("td");
-  cell.className = "data-cell";
-  const wrapper = document.createElement("div");
-  wrapper.className = "wind-cell";
-  const arrow = document.createElement("span");
-  arrow.className = "arrow";
+  const cell = document.createElement('td');
+  cell.className = 'data-cell';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'wind-cell';
+  const arrow = document.createElement('span');
+  arrow.className = 'arrow';
   arrow.style.transform = arrowForDegrees(degrees);
-  const dirEl = document.createElement("span");
-  dirEl.className = "cell-main";
+  const dirEl = document.createElement('span');
+  dirEl.className = 'cell-main';
   dirEl.textContent = direction;
   wrapper.append(arrow, dirEl);
   cell.appendChild(wrapper);
@@ -385,39 +477,60 @@ function buildDirectionCell(direction, degrees) {
 }
 
 function buildWindCell(speed, direction, degrees) {
-  const cell = document.createElement("td");
-  cell.className = "data-cell";
-  const wrapper = document.createElement("div");
-  wrapper.className = "wind-cell";
-  const arrow = document.createElement("span");
-  arrow.className = "arrow";
+  const cell = document.createElement('td');
+  cell.className = 'data-cell';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'wind-cell';
+  const arrow = document.createElement('span');
+  arrow.className = 'arrow';
   arrow.style.transform = arrowForDegrees(degrees);
-  const speedEl = document.createElement("span");
-  speedEl.className = "cell-main";
-  speedEl.textContent = formatValue(speed, " kt");
-  const dirEl = document.createElement("span");
-  dirEl.className = "cell-sub";
+  const speedEl = document.createElement('span');
+  speedEl.className = 'cell-main';
+  speedEl.textContent = formatValue(speed, ' kt');
+  const dirEl = document.createElement('span');
+  dirEl.className = 'cell-sub';
   dirEl.textContent = direction;
   wrapper.append(arrow, speedEl, dirEl);
   cell.appendChild(wrapper);
   return cell;
 }
 
-function renderTideChart(svg, tideEvents, columns, start, end) {
-  svg.innerHTML = "";
+function renderTideChart(svg, tideEvents, columns, headerCells) {
+  svg.innerHTML = '';
   renderTideChart.lastLabelX = null;
   if (tideEvents.length < 2) return;
 
-  const columnWidth = 62;
-  const svgWidth = Math.max(columns.length * columnWidth, 300);
+  const svgRect = svg.getBoundingClientRect();
+  const svgWidth = Math.max(svgRect.width, 300);
   const svgHeight = 120;
   const padding = 16;
-  svg.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
-  svg.setAttribute("preserveAspectRatio", "none");
+  svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
 
-  const events = tideEvents
-    .filter((event) => event.date && event.date >= start && event.date <= end)
-    .sort((a, b) => a.date - b.date);
+  if (!headerCells.length) return;
+  const svgLeft = svgRect.left;
+  const headerCenters = headerCells.map((cell) => {
+    const rect = cell.getBoundingClientRect();
+    return rect.left - svgLeft + rect.width / 2;
+  });
+  const startX = headerCenters[0];
+  const endX = headerCenters[headerCenters.length - 1];
+  const start = columns[0]?.time ?? new Date();
+  const end = columns[columns.length - 1]?.time ?? new Date();
+
+  const events = tideEvents.filter(
+    (event) => event.date && event.date >= start && event.date <= end,
+  );
+  const startLevel = tideLevelAt(tideEvents, start);
+  if (startLevel) {
+    events.push({
+      type: 'CUR',
+      height: `${startLevel.height.toFixed(2)} m`,
+      timeText: formatTideTime.format(start),
+      date: new Date(start),
+    });
+  }
+  events.sort((a, b) => a.date - b.date);
   if (events.length < 2) return;
 
   const heights = events
@@ -431,7 +544,7 @@ function renderTideChart(svg, tideEvents, columns, start, end) {
     return svgHeight - padding - ratio * (svgHeight - padding * 2);
   };
   const scaleX = (date) =>
-    ((date - start) / (end - start || 1)) * svgWidth;
+    startX + ((date - start) / (end - start || 1)) * (endX - startX);
 
   const points = [];
   for (let i = 0; i < events.length - 1; i += 1) {
@@ -446,30 +559,35 @@ function renderTideChart(svg, tideEvents, columns, start, end) {
     const step = 30;
     for (let m = 0; m <= segmentMinutes; m += step) {
       const ratio = segmentMinutes ? m / segmentMinutes : 0;
-      const value = h1 + (h2 - h1) * (1 - Math.cos(Math.PI * ratio)) / 2;
+      const value = h1 + ((h2 - h1) * (1 - Math.cos(Math.PI * ratio))) / 2;
       const time = new Date(t1.getTime() + m * 60 * 1000);
       points.push({ x: scaleX(time), y: scaleY(value) });
     }
   }
 
   if (!points.length) return;
-  const fillPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  const fillPath = document.createElementNS(
+    'http://www.w3.org/2000/svg',
+    'path',
+  );
   const baseline = svgHeight - padding;
   const fillD = `${points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ")} L ${points[points.length - 1].x} ${baseline} L ${points[0].x} ${baseline} Z`;
-  fillPath.setAttribute("d", fillD);
-  fillPath.setAttribute("fill", "rgba(78, 161, 255, 0.2)");
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
+    .join(' ')} L ${points[points.length - 1].x} ${baseline} L ${
+    points[0].x
+  } ${baseline} Z`;
+  fillPath.setAttribute('d', fillD);
+  fillPath.setAttribute('fill', 'rgba(78, 161, 255, 0.2)');
   svg.appendChild(fillPath);
 
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   const d = points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ");
-  path.setAttribute("d", d);
-  path.setAttribute("fill", "none");
-  path.setAttribute("stroke", "#62c1ff");
-  path.setAttribute("stroke-width", "2");
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
+    .join(' ');
+  path.setAttribute('d', d);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', '#2c6bbf');
+  path.setAttribute('stroke-width', '2');
   svg.appendChild(path);
 
   events.forEach((event) => {
@@ -477,19 +595,29 @@ function renderTideChart(svg, tideEvents, columns, start, end) {
     if (height === null) return;
     const cx = scaleX(event.date);
     const cy = scaleY(height);
-    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    circle.setAttribute("cx", cx);
-    circle.setAttribute("cy", cy);
-    circle.setAttribute("r", "4");
-    circle.setAttribute("class", "tide-marker");
+    const circle = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'circle',
+    );
+    circle.setAttribute('cx', cx);
+    circle.setAttribute('cy', cy);
+    circle.setAttribute('r', '4');
+    circle.setAttribute('class', 'tide-marker');
     svg.appendChild(circle);
 
-    if (!renderTideChart.lastLabelX || Math.abs(cx - renderTideChart.lastLabelX) > 70) {
-      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      label.setAttribute("x", cx + 6);
-      label.setAttribute("y", cy - 8);
-      label.setAttribute("class", "tide-label");
-      label.textContent = `${event.type[0]} ${event.timeText} · ${event.height}`;
+    if (
+      !renderTideChart.lastLabelX ||
+      Math.abs(cx - renderTideChart.lastLabelX) > 70
+    ) {
+      const label = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'text',
+      );
+      label.setAttribute('x', cx);
+      label.setAttribute('y', cy - 10);
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('class', 'tide-label');
+      label.textContent = `${event.timeText} · ${event.height}`;
       svg.appendChild(label);
       renderTideChart.lastLabelX = cx;
     }
@@ -497,18 +625,20 @@ function renderTideChart(svg, tideEvents, columns, start, end) {
 }
 
 function renderForecast(data, tideEvents) {
-  ui.forecastHeadRow.innerHTML = "";
-  ui.forecastBody.innerHTML = "";
+  ui.forecastHeadRow.innerHTML = '';
+  ui.forecastBody.innerHTML = '';
   ui.forecastHeadRow.appendChild(
-    Object.assign(document.createElement("th"), {
-      className: "label-cell",
-      textContent: "Date",
-    })
+    Object.assign(document.createElement('th'), {
+      className: 'label-cell',
+      textContent: 'Date',
+    }),
   );
 
   const times = data.hourly.time.map((time) => new Date(time));
   const now = new Date();
-  const end = new Date(now.getTime() + config.forecastDays * 24 * 60 * 60 * 1000);
+  const end = new Date(
+    now.getTime() + config.forecastDays * 24 * 60 * 60 * 1000,
+  );
   let startIndex = times.findIndex((time) => time >= now);
   if (startIndex < 0) startIndex = 0;
 
@@ -522,29 +652,31 @@ function renderForecast(data, tideEvents) {
   }
 
   const rows = [
-    { label: "Time", key: "time" },
-    { label: "Temp °C", key: "temperature_2m" },
-    { label: "Wind kt", key: "wind_speed_10m" },
-    { label: "Direction", key: "wind_direction_10m" },
-    { label: "Gusts kt", key: "wind_gusts_10m" },
-    { label: "Rain mm", key: "precipitation" },
-    { label: "Tide", key: "tide" },
-    { label: "Tide curve", key: "tide_curve" },
+    { label: 'Time', key: 'time' },
+    { label: 'Temp °C', key: 'temperature_2m' },
+    { label: 'Wind kt', key: 'wind_speed_10m' },
+    { label: 'Direction', key: 'wind_direction_10m' },
+    { label: 'Gusts kt', key: 'wind_gusts_10m' },
+    { label: 'Rain mm', key: 'precipitation' },
+    { label: 'Sky', key: 'sky' },
+    { label: 'Tide m', key: 'tide' },
+    { label: 'Tide curve', key: 'tide_curve' },
+    { label: 'Score', key: 'score' },
   ];
 
   rows.forEach((row) => {
-    const tr = document.createElement("tr");
-    const label = document.createElement("th");
-    label.className = "label-cell";
+    const tr = document.createElement('tr');
+    const label = document.createElement('th');
+    label.className = 'label-cell';
     label.textContent = row.label;
     tr.appendChild(label);
 
-    if (row.key === "tide_curve") {
-      const cell = document.createElement("td");
-      cell.className = "data-cell tide-curve-cell";
+    if (row.key === 'tide_curve') {
+      const cell = document.createElement('td');
+      cell.className = 'data-cell tide-curve-cell';
       cell.colSpan = columns.length;
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("class", "tide-row-svg");
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'tide-row-svg');
       cell.appendChild(svg);
       tr.appendChild(cell);
       ui.forecastBody.appendChild(tr);
@@ -552,99 +684,150 @@ function renderForecast(data, tideEvents) {
     }
 
     columns.forEach((column) => {
-      if (row.key === "wind_speed_10m") {
+      if (row.key === 'wind_speed_10m') {
         const speed = data.hourly.wind_speed_10m[column.index];
         const cell = buildDataCell(
           `${Math.round(speed)}`,
-          "",
+          '',
           colorForValue(speed, [
-            { value: 0, color: "#0a1a2b" },
-            { value: 8, color: "#12314f" },
-            { value: 12, color: "#1a4f86" },
-            { value: 16, color: "#1a7a63" },
-            { value: 20, color: "#6b8f1a" },
-            { value: 24, color: "#c47c13" },
-            { value: 28, color: "#c0392b" },
-            { value: 32, color: "#7b1d6b" },
-          ])
+            { value: 0, color: '#0a1a2b' },
+            { value: 8, color: '#12314f' },
+            { value: 12, color: '#1a4f86' },
+            { value: 16, color: '#1a7a63' },
+            { value: 20, color: '#6b8f1a' },
+            { value: 24, color: '#c47c13' },
+            { value: 28, color: '#c0392b' },
+            { value: 32, color: '#7b1d6b' },
+          ]),
         );
         tr.appendChild(cell);
         return;
       }
 
-      if (row.key === "wind_direction_10m") {
+      if (row.key === 'wind_direction_10m') {
         const degrees = data.hourly.wind_direction_10m[column.index];
         const direction = windCompass(degrees);
         const cell = buildDirectionCell(direction, degrees);
-        cell.style.background = "rgba(8, 18, 28, 0.5)";
+        cell.style.background = 'rgba(8, 18, 28, 0.5)';
         tr.appendChild(cell);
         return;
       }
 
-      if (row.key === "tide") {
+      if (row.key === 'tide') {
         const windowStart = column.time;
         const windowEnd = new Date(
-          windowStart.getTime() + windowSize * 60 * 60 * 1000
+          windowStart.getTime() + windowSize * 60 * 60 * 1000,
         );
         const tideText = tideForWindow(tideEvents, windowStart, windowEnd);
-        const cell = buildDataCell(tideText, "", "rgba(10, 24, 38, 0.4)");
+        const tideLevel = tideLevelAt(tideEvents, windowStart);
+        const heightValue = tideLevel ? tideLevel.height : null;
+        const cell = buildDataCell(
+          tideText,
+          '',
+          colorForValue(heightValue, [
+            { value: 0, color: '#081420' },
+            { value: 2, color: '#0f2538' },
+            { value: 4, color: '#163a5a' },
+            { value: 6, color: '#2c6bbf' },
+          ]),
+        );
         tr.appendChild(cell);
         return;
       }
 
-      if (row.key === "temperature_2m") {
+      if (row.key === 'temperature_2m') {
         const temp = data.hourly.temperature_2m[column.index];
         const cell = buildDataCell(
           `${Math.round(temp)}°`,
-          "",
+          '',
           colorForValue(temp, [
-            { value: -2, color: "#1b2b44" },
-            { value: 4, color: "#225c8a" },
-            { value: 10, color: "#1f8a70" },
-            { value: 16, color: "#f6aa1c" },
-            { value: 22, color: "#f2545b" },
-          ])
+            { value: -2, color: '#1b2b44' },
+            { value: 4, color: '#225c8a' },
+            { value: 10, color: '#1f8a70' },
+            { value: 16, color: '#f6aa1c' },
+            { value: 22, color: '#f2545b' },
+          ]),
         );
         tr.appendChild(cell);
         return;
       }
 
-      if (row.key === "wind_gusts_10m") {
+      if (row.key === 'wind_gusts_10m') {
         const gusts = data.hourly.wind_gusts_10m[column.index];
         const cell = buildDataCell(
           `${Math.round(gusts)}`,
-          "",
+          '',
           colorForValue(gusts, [
-            { value: 0, color: "#0f2235" },
-            { value: 10, color: "#1a4f86" },
-            { value: 18, color: "#6b8f1a" },
-            { value: 24, color: "#c47c13" },
-            { value: 30, color: "#c0392b" },
-          ])
+            { value: 0, color: '#0f2235' },
+            { value: 10, color: '#1a4f86' },
+            { value: 18, color: '#6b8f1a' },
+            { value: 24, color: '#c47c13' },
+            { value: 30, color: '#c0392b' },
+          ]),
         );
         tr.appendChild(cell);
         return;
       }
 
-      if (row.key === "precipitation") {
+      if (row.key === 'precipitation') {
         const precip = data.hourly.precipitation[column.index];
         const prob = data.hourly.precipitation_probability[column.index];
         const cell = buildDataCell(
-          `${Number.isNaN(Number(precip)) ? "—" : Number(precip).toFixed(1).replace(/\.0$/, "")}`,
+          `${
+            Number.isNaN(Number(precip))
+              ? '—'
+              : Number(precip).toFixed(1).replace(/\.0$/, '')
+          }`,
           `${Math.round(prob)}%`,
           colorForValue(prob, [
-            { value: 0, color: "#0a1828" },
-            { value: 30, color: "#12314f" },
-            { value: 60, color: "#1e4e9c" },
-            { value: 80, color: "#2c6bbf" },
-          ])
+            { value: 0, color: '#2c6bbf' },
+            { value: 30, color: '#1e4e9c' },
+            { value: 60, color: '#12314f' },
+            { value: 80, color: '#0a1828' },
+          ]),
         );
         tr.appendChild(cell);
         return;
       }
 
-      if (row.key === "time") {
+      if (row.key === 'sky') {
+        const cloud = data.hourly.cloud_cover[column.index];
+        const cell = buildDataCell(
+          skyIcon(cloud, column.time),
+          `${Math.round(cloud)}%`,
+          colorForValue(cloud, [
+            { value: 0, color: '#1e4e9c' },
+            { value: 30, color: '#163a5a' },
+            { value: 60, color: '#0f2538' },
+            { value: 80, color: '#081420' },
+          ]),
+        );
+        const main = cell.querySelector('.cell-main');
+        if (main) {
+          main.style.fontSize = '1.2rem';
+          main.style.color = cloud < 20 ? '#ffd54a' : 'var(--ink)';
+        }
+        tr.appendChild(cell);
+        return;
+      }
+
+      if (row.key === 'time') {
         const cell = buildTimeCell(column.time);
+        tr.appendChild(cell);
+        return;
+      }
+
+      if (row.key === 'score') {
+        const windSpeed = data.hourly.wind_speed_10m[column.index];
+        const degrees = data.hourly.wind_direction_10m[column.index];
+        const windDirOk = degrees >= 135 && degrees <= 225;
+        const tideLevel = tideLevelAt(tideEvents, column.time);
+        let stars = 0;
+        if (windSpeed >= 16) stars += 1;
+        if (windDirOk) stars += 1;
+        if (tideLevel && tideLevel.lowerHalf) stars += 1;
+        const cell = buildDataCell(stars ? '★'.repeat(stars) : '—', '', '');
+        cell.classList.add(`score-${stars}`);
         tr.appendChild(cell);
         return;
       }
@@ -655,17 +838,37 @@ function renderForecast(data, tideEvents) {
 
   if (columns.length) {
     if (ui.forecastRange) {
-      ui.forecastRange.textContent = `${formatWindow.format(columns[0].time)} → ${formatWindow.format(
-        columns[columns.length - 1].time
-      )}`;
+      ui.forecastRange.textContent = `${formatWindow.format(
+        columns[0].time,
+      )} → ${formatWindow.format(columns[columns.length - 1].time)}`;
     }
   } else if (ui.forecastRange) {
-    ui.forecastRange.textContent = "No forecast windows";
+    ui.forecastRange.textContent = 'No forecast windows';
   }
 
-  const curveRow = ui.forecastBody.querySelector(".tide-curve-cell svg");
+  const curveRow = ui.forecastBody.querySelector('.tide-curve-cell svg');
+  const headerCells = Array.from(
+    ui.forecastHeadRow.querySelectorAll('th.data-cell'),
+  );
   if (curveRow) {
-    renderTideChart(curveRow, tideEvents, columns, now, end);
+    requestAnimationFrame(() => {
+      renderTideChart(curveRow, tideEvents, columns, headerCells);
+    });
+  }
+
+  if (ui.currentScore && columns.length) {
+    const now = new Date();
+    const nowColumn =
+      columns.find((column) => column.time >= now) || columns[0];
+    const windSpeed = data.hourly.wind_speed_10m[nowColumn.index];
+    const degrees = data.hourly.wind_direction_10m[nowColumn.index];
+    const windDirOk = degrees >= 135 && degrees <= 225;
+    const tideLevel = tideLevelAt(tideEvents, nowColumn.time);
+    let stars = 0;
+    if (windSpeed >= 16) stars += 1;
+    if (windDirOk) stars += 1;
+    if (tideLevel && tideLevel.lowerHalf) stars += 1;
+    ui.currentScore.textContent = stars ? '★'.repeat(stars) : '—';
   }
 }
 
@@ -683,7 +886,12 @@ function loadCache() {
   if (!weatherRaw) return null;
   try {
     const weather = JSON.parse(weatherRaw);
-    const tides = tidesRaw ? JSON.parse(tidesRaw) : [];
+    const tides = tidesRaw
+      ? JSON.parse(tidesRaw).map((event) => ({
+          ...event,
+          date: event.date ? new Date(event.date) : null,
+        }))
+      : [];
     return {
       weather,
       tides,
@@ -698,13 +906,25 @@ function loadCache() {
 function renderFromCache() {
   const cached = loadCache();
   if (!cached) {
-    ui.lastUpdated.textContent = "No cached data. Tap Refresh.";
+    ui.lastUpdated.textContent = 'No cached data. Tap Refresh.';
     return;
   }
   renderCurrent(cached.weather);
   renderForecast(cached.weather, cached.tides);
-  setTideStatus("");
+  setTideStatus('');
   setCachedUpdated(cached.updated);
+
+  if (!cached.tides || !cached.tides.length) {
+    loadTides({ force: false })
+      .then((tides) => {
+        if (!tides.length) return;
+        renderForecast(cached.weather, tides);
+        saveCache(cached.weather, tides);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
 }
 
 function setLocation() {
@@ -712,17 +932,20 @@ function setLocation() {
 }
 
 function setLastUpdated() {
-  ui.lastUpdated.textContent = `Updated ${new Date().toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`;
+  ui.lastUpdated.textContent = `Updated ${new Date().toLocaleTimeString(
+    'en-GB',
+    {
+      hour: '2-digit',
+      minute: '2-digit',
+    },
+  )}`;
 }
 
 function handleError(error) {
   if (ui.currentSummary) {
-    ui.currentSummary.textContent = "Offline";
+    ui.currentSummary.textContent = 'Offline';
   }
-  ui.lastUpdated.textContent = "Could not refresh data";
+  ui.lastUpdated.textContent = 'Could not refresh data';
   console.error(error);
 }
 
@@ -733,7 +956,7 @@ async function loadForecast() {
   try {
     const [weatherResponse, tideEvents] = await Promise.all([
       fetch(buildUrl()),
-      loadTides(),
+      loadTides({ force: true }),
     ]);
     if (!weatherResponse.ok) {
       throw new Error(`Open-Meteo error: ${weatherResponse.status}`);
@@ -741,7 +964,7 @@ async function loadForecast() {
     const data = await weatherResponse.json();
     renderCurrent(data);
     renderForecast(data, tideEvents);
-    setTideStatus("");
+    setTideStatus('');
     setLastUpdated();
     saveCache(data, tideEvents);
   } catch (error) {
@@ -749,7 +972,7 @@ async function loadForecast() {
   }
 }
 
-ui.refresh.addEventListener("click", () => {
+ui.refresh.addEventListener('click', () => {
   loadForecast();
 });
 

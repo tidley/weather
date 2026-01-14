@@ -1,5 +1,5 @@
 import http from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,6 +15,7 @@ const PORT = process.env.PORT || 8787;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = __dirname;
+const tideCachePath = path.join(rootDir, "tides-cache.json");
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -92,6 +93,25 @@ async function handleTidesProxy(req, res, url) {
     return sendJson(res, 400, { error: "Missing station parameter." });
   }
 
+  const refresh = url.searchParams.get("refresh") === "1";
+  if (!refresh) {
+    try {
+      const cacheRaw = await readFile(tideCachePath, "utf-8");
+      const cache = JSON.parse(cacheRaw);
+      if (cache?.data) {
+        res.writeHead(200, {
+          "Content-Type": "application/json; charset=utf-8",
+          "Access-Control-Allow-Origin": "*",
+          "Cache-Control": "max-age=300",
+        });
+        res.end(JSON.stringify(cache.data));
+        return;
+      }
+    } catch (error) {
+      // Cache miss or parse error; fall through to upstream fetch.
+    }
+  }
+
   const upstream = new URL(
     `https://admiraltyapi.azure-api.net/uktidalapi/api/V1/Stations/${stationId}/TidalEvents`
   );
@@ -113,6 +133,15 @@ async function handleTidesProxy(req, res, url) {
       });
     }
     const body = await response.text();
+    try {
+      await writeFile(
+        tideCachePath,
+        JSON.stringify({ timestamp: Date.now(), data: JSON.parse(body) }, null, 2),
+        "utf-8"
+      );
+    } catch (error) {
+      // Ignore cache write errors.
+    }
     res.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
       "Access-Control-Allow-Origin": "*",
