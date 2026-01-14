@@ -33,7 +33,6 @@ const ui = {
   forecastRange: document.getElementById('forecast-range'),
   tideStatus: document.getElementById('tide-status'),
   tideSource: document.getElementById('tide-source'),
-  tideLink: document.getElementById('tide-link'),
   tideSvg: document.getElementById('tide-svg'),
   refresh: document.getElementById('refresh'),
 };
