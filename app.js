@@ -8,7 +8,7 @@ const config = {
     provider: "rss",
     rssUrl: "https://www.tidetimes.org.uk/hastings-tide-times.rss",
     sourceUrl: "https://www.tidetimes.org.uk/hastings-tide-times",
-    corsProxy: "https://api.allorigins.win/raw?url=",
+    corsProxy: "http://localhost:8787/rss?url=",
   },
 };
 

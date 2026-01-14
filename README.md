@@ -8,10 +8,10 @@ Simple, single-location weather dashboard aimed at quick kitesurfing checks.
 - Serve the folder (recommended for mobile testing):
 
 ```bash
-python3 -m http.server 5173
+node server.js
 ```
 
-Then open `http://localhost:5173`.
+Then open `http://localhost:8787`.
 
 ## Configure location
 
@@ -25,10 +25,8 @@ Edit the `config` block in `app.js`:
 
 ## Tides (RSS)
 
-The tide card pulls from an RSS feed by default. Update the feed in `app.js`:
+The tide card pulls from an RSS feed by default, proxied locally to avoid CORS issues. Update the feed in `app.js`:
 
 - `config.tide.rssUrl` (RSS feed URL)
 - `config.tide.sourceUrl` (link for the “Tide source” button)
-- `config.tide.corsProxy` (optional; some RSS feeds block browser requests)
-
-If the feed blocks CORS, set `corsProxy` to a compatible proxy prefix that accepts a URL query.
+- `config.tide.corsProxy` (local proxy; defaults to `http://localhost:8787/rss?url=`)
