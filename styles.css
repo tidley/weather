@@ -210,7 +210,7 @@ h2 {
 }
 
 .forecast-grid thead .cell-main {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
 }
 
 .forecast-grid thead .cell-sub {
@@ -231,6 +231,14 @@ h2 {
 .data-cell {
   min-width: 62px;
   border-left: 1px solid rgba(231, 242, 255, 0.04);
+}
+
+.col-score-high {
+  box-shadow: inset 0 0 0 9999px rgba(32, 120, 60, 0.18);
+}
+
+.col-score-low {
+  box-shadow: inset 0 0 0 9999px rgba(120, 130, 140, 0.18);
 }
 
 .cell-stack {
@@ -268,7 +276,8 @@ h2 {
 
 .score-1 .cell-main,
 .score-2 .cell-main,
-.score-3 .cell-main {
+.score-3 .cell-main,
+.score-4 .cell-main {
   font-size: 1.1rem;
   letter-spacing: 1px;
   color: #f7c948;
@@ -284,6 +293,10 @@ h2 {
 
 .score-3 {
   background: rgba(78, 161, 255, 0.24);
+}
+
+.score-4 {
+  background: rgba(78, 161, 255, 0.3);
 }
 
 .tide-chart {

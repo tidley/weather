@@ -143,6 +143,62 @@ function timeGradient(time) {
   return lerpColor('#081420', '#1e4e9c', t);
 }
 
+function toRad(degrees) {
+  return (degrees * Math.PI) / 180;
+}
+
+function toDeg(radians) {
+  return (radians * 180) / Math.PI;
+}
+
+function dayOfYear(date) {
+  const start = Date.UTC(date.getUTCFullYear(), 0, 1);
+  const now = Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+  );
+  return Math.floor((now - start) / 86400000) + 1;
+}
+
+function isDaylight(date, latitude, longitude) {
+  const doy = dayOfYear(date);
+  const hour = date.getUTCHours() + date.getUTCMinutes() / 60;
+  const gamma =
+    (2 * Math.PI / 365) * (doy - 1 + (hour - 12) / 24);
+  const decl =
+    0.006918 -
+    0.399912 * Math.cos(gamma) +
+    0.070257 * Math.sin(gamma) -
+    0.006758 * Math.cos(2 * gamma) +
+    0.000907 * Math.sin(2 * gamma) -
+    0.002697 * Math.cos(3 * gamma) +
+    0.00148 * Math.sin(3 * gamma);
+  const eqTime =
+    229.18 *
+    (0.000075 +
+      0.001868 * Math.cos(gamma) -
+      0.032077 * Math.sin(gamma) -
+      0.014615 * Math.cos(2 * gamma) -
+      0.040849 * Math.sin(2 * gamma));
+  const timeOffset = eqTime + 4 * longitude - 60 * (-date.getTimezoneOffset() / 60);
+  const trueSolarTime =
+    (date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60 + timeOffset) %
+    1440;
+  let hourAngle = trueSolarTime / 4 - 180;
+  if (hourAngle < -180) hourAngle += 360;
+
+  const latRad = toRad(latitude);
+  const zenith =
+    Math.cos(latRad) * Math.cos(decl) * Math.cos(toRad(hourAngle)) +
+    Math.sin(latRad) * Math.sin(decl);
+  const solarZenith = toDeg(Math.acos(Math.min(Math.max(zenith, -1), 1)));
+  return solarZenith < 90.833;
+}
+
 function parseHeightNumber(value) {
   if (!value) return null;
   const number = Number.parseFloat(String(value));
@@ -164,6 +220,18 @@ function skyIcon(cloudCover, time) {
   if (cloudCover < 50) return isNight ? '🌙' : '⛅';
   if (cloudCover < 80) return isNight ? '☁️🌙' : '🌥️';
   return '☁️';
+}
+
+function lunarPhaseInfo(date) {
+  const reference = Date.UTC(2000, 0, 6, 18, 14, 0);
+  const synodicMonth = 29.53058867;
+  const daysSince = (date.getTime() - reference) / 86400000;
+  const phase = ((daysSince % synodicMonth) + synodicMonth) % synodicMonth;
+  const fraction = phase / synodicMonth;
+  const index = Math.floor(fraction * 8) % 8;
+  const icons = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
+  const illumination = (1 - Math.cos(2 * Math.PI * fraction)) / 2;
+  return { icon: icons[index], illumination };
 }
 
 function buildUrl() {
@@ -419,6 +487,59 @@ function tideLevelAt(tideEvents, time) {
   };
 }
 
+function computeScore({
+  windSpeed,
+  gustSpeed,
+  windDirDegrees,
+  tideLevel,
+  cloudCover,
+  isDaylightNow,
+}) {
+  const reasons = [];
+  let score = 0;
+
+  if (windSpeed >= 20) {
+    score += 1;
+    reasons.push("+ strong wind (≥20 kt)");
+  }
+  if (windDirDegrees >= 135 && windDirDegrees <= 225) {
+    score += 1;
+    reasons.push("+ wind direction SE–SW");
+  }
+  if (tideLevel && tideLevel.lowerHalf) {
+    score += 1;
+    reasons.push("+ lower tide half");
+  }
+  if (cloudCover < 50) {
+    score += 1;
+    reasons.push("+ cloud cover < 50%");
+  }
+  if (windSpeed < 12) {
+    score -= 1;
+    reasons.push("- wind < 12 kt");
+  }
+  if (gustSpeed && windSpeed) {
+    const gustFactor = gustSpeed / windSpeed;
+    if (gustFactor < 1.3) {
+      score += 1;
+      reasons.push("+ gust factor < 1.3");
+    }
+    if (gustFactor > 1.6) {
+      score -= 1;
+      reasons.push("- gust factor > 1.6");
+    }
+  }
+  if (!isDaylightNow) {
+    score -= 1;
+    reasons.push("- not daylight");
+  }
+
+  return {
+    score: Math.max(0, score),
+    reasons,
+  };
+}
+
 function buildHeaderCell(time) {
   const cell = document.createElement('th');
   cell.className = 'data-cell';
@@ -458,6 +579,14 @@ function buildDataCell(mainText, subText, background) {
   wrapper.append(main, sub);
   cell.appendChild(wrapper);
   return cell;
+}
+
+function applyColumnWash(cell, score) {
+  if (score >= 3) {
+    cell.classList.add('col-score-high');
+  } else if (score <= 1) {
+    cell.classList.add('col-score-low');
+  }
 }
 
 function buildDirectionCell(direction, degrees) {
@@ -653,22 +782,57 @@ function renderForecast(data, tideEvents) {
 
   const rows = [
     { label: 'Time', key: 'time' },
-    { label: 'Temp °C', key: 'temperature_2m' },
-    { label: 'Wind kt', key: 'wind_speed_10m' },
-    { label: 'Direction', key: 'wind_direction_10m' },
-    { label: 'Gusts kt', key: 'wind_gusts_10m' },
-    { label: 'Rain mm', key: 'precipitation' },
-    { label: 'Sky', key: 'sky' },
-    { label: 'Tide m', key: 'tide' },
-    { label: 'Tide curve', key: 'tide_curve' },
     { label: 'Score', key: 'score' },
+    { label: 'Temp (°C)', key: 'temperature_2m' },
+    { label: 'Wind (kt)', key: 'wind_speed_10m' },
+    { label: 'Direction', key: 'wind_direction_10m' },
+    { label: 'Gusts (kt)', key: 'wind_gusts_10m' },
+    { label: 'Gust factor', key: 'gust_factor' },
+    { label: 'Rain (mm)', key: 'precipitation' },
+    { label: 'Sky', key: 'sky' },
+    { label: 'Moon', key: 'moon' },
+    { label: 'Tide (m)', key: 'tide' },
+    { label: 'Tide curve', key: 'tide_curve' },
   ];
+
+  const columnScores = columns.map((column) => {
+    const windSpeed = data.hourly.wind_speed_10m[column.index];
+    const gustSpeed = data.hourly.wind_gusts_10m[column.index];
+    const degrees = data.hourly.wind_direction_10m[column.index];
+    const tideLevel = tideLevelAt(tideEvents, column.time);
+    const cloud = data.hourly.cloud_cover[column.index];
+    return computeScore({
+      windSpeed,
+      gustSpeed,
+      windDirDegrees: degrees,
+      tideLevel,
+      cloudCover: cloud,
+      isDaylightNow: isDaylight(
+        column.time,
+        config.latitude,
+        config.longitude,
+      ),
+    });
+  });
 
   rows.forEach((row) => {
     const tr = document.createElement('tr');
     const label = document.createElement('th');
     label.className = 'label-cell';
     label.textContent = row.label;
+    if (row.key === 'precipitation') {
+      label.title = 'Precipitation probability (%) and amount.';
+    }
+    if (row.key === 'sky') {
+      label.title = 'Cloud cover (%).';
+    }
+    if (row.key === 'moon') {
+      label.title = 'Moon illumination (%).';
+    }
+    if (row.key === 'score') {
+      label.title =
+        'Score: wind speed, wind direction, tide, cloud cover; penalties for low wind and no daylight.';
+    }
     tr.appendChild(label);
 
     if (row.key === 'tide_curve') {
@@ -683,7 +847,7 @@ function renderForecast(data, tideEvents) {
       return;
     }
 
-    columns.forEach((column) => {
+    columns.forEach((column, colIndex) => {
       if (row.key === 'wind_speed_10m') {
         const speed = data.hourly.wind_speed_10m[column.index];
         const cell = buildDataCell(
@@ -700,6 +864,7 @@ function renderForecast(data, tideEvents) {
             { value: 32, color: '#7b1d6b' },
           ]),
         );
+        applyColumnWash(cell, columnScores[colIndex].score);
         tr.appendChild(cell);
         return;
       }
@@ -709,6 +874,7 @@ function renderForecast(data, tideEvents) {
         const direction = windCompass(degrees);
         const cell = buildDirectionCell(direction, degrees);
         cell.style.background = 'rgba(8, 18, 28, 0.5)';
+        applyColumnWash(cell, columnScores[colIndex].score);
         tr.appendChild(cell);
         return;
       }
@@ -731,6 +897,7 @@ function renderForecast(data, tideEvents) {
             { value: 6, color: '#2c6bbf' },
           ]),
         );
+        applyColumnWash(cell, columnScores[colIndex].score);
         tr.appendChild(cell);
         return;
       }
@@ -748,6 +915,7 @@ function renderForecast(data, tideEvents) {
             { value: 22, color: '#f2545b' },
           ]),
         );
+        applyColumnWash(cell, columnScores[colIndex].score);
         tr.appendChild(cell);
         return;
       }
@@ -765,6 +933,27 @@ function renderForecast(data, tideEvents) {
             { value: 30, color: '#c0392b' },
           ]),
         );
+        applyColumnWash(cell, columnScores[colIndex].score);
+        tr.appendChild(cell);
+        return;
+      }
+
+      if (row.key === 'gust_factor') {
+        const wind = data.hourly.wind_speed_10m[column.index];
+        const gusts = data.hourly.wind_gusts_10m[column.index];
+        const gustFactor = wind ? gusts / wind : null;
+        const cell = buildDataCell(
+          gustFactor ? gustFactor.toFixed(2) : '—',
+          '',
+          colorForValue(gustFactor, [
+            { value: 0.8, color: '#2f7d32' },
+            { value: 1.1, color: '#7cb342' },
+            { value: 1.3, color: '#c0ca33' },
+            { value: 1.6, color: '#f6aa1c' },
+            { value: 2.0, color: '#c0392b' },
+          ]),
+        );
+        applyColumnWash(cell, columnScores[colIndex].score);
         tr.appendChild(cell);
         return;
       }
@@ -786,6 +975,7 @@ function renderForecast(data, tideEvents) {
             { value: 80, color: '#0a1828' },
           ]),
         );
+        applyColumnWash(cell, columnScores[colIndex].score);
         tr.appendChild(cell);
         return;
       }
@@ -807,27 +997,40 @@ function renderForecast(data, tideEvents) {
           main.style.fontSize = '1.2rem';
           main.style.color = cloud < 20 ? '#ffd54a' : 'var(--ink)';
         }
+        applyColumnWash(cell, columnScores[colIndex].score);
+        tr.appendChild(cell);
+        return;
+      }
+
+      if (row.key === 'moon') {
+        const { icon, illumination } = lunarPhaseInfo(column.time);
+        const cell = buildDataCell(
+          icon,
+          `${Math.round(illumination * 100)}%`,
+          timeGradient(column.time),
+        );
+        const main = cell.querySelector('.cell-main');
+        if (main) {
+          main.style.fontSize = '1.15rem';
+        }
+        applyColumnWash(cell, columnScores[colIndex].score);
         tr.appendChild(cell);
         return;
       }
 
       if (row.key === 'time') {
         const cell = buildTimeCell(column.time);
+        applyColumnWash(cell, columnScores[colIndex].score);
         tr.appendChild(cell);
         return;
       }
 
       if (row.key === 'score') {
-        const windSpeed = data.hourly.wind_speed_10m[column.index];
-        const degrees = data.hourly.wind_direction_10m[column.index];
-        const windDirOk = degrees >= 135 && degrees <= 225;
-        const tideLevel = tideLevelAt(tideEvents, column.time);
-        let stars = 0;
-        if (windSpeed >= 16) stars += 1;
-        if (windDirOk) stars += 1;
-        if (tideLevel && tideLevel.lowerHalf) stars += 1;
-        const cell = buildDataCell(stars ? '★'.repeat(stars) : '—', '', '');
-        cell.classList.add(`score-${stars}`);
+        const { score, reasons } = columnScores[colIndex];
+        const cell = buildDataCell(score ? '★'.repeat(score) : '—', '', '');
+        cell.classList.add(`score-${score}`);
+        cell.title = reasons.length ? reasons.join(" \n") : "No score boosts.";
+        applyColumnWash(cell, score);
         tr.appendChild(cell);
         return;
       }
@@ -858,17 +1061,11 @@ function renderForecast(data, tideEvents) {
 
   if (ui.currentScore && columns.length) {
     const now = new Date();
-    const nowColumn =
-      columns.find((column) => column.time >= now) || columns[0];
-    const windSpeed = data.hourly.wind_speed_10m[nowColumn.index];
-    const degrees = data.hourly.wind_direction_10m[nowColumn.index];
-    const windDirOk = degrees >= 135 && degrees <= 225;
-    const tideLevel = tideLevelAt(tideEvents, nowColumn.time);
-    let stars = 0;
-    if (windSpeed >= 16) stars += 1;
-    if (windDirOk) stars += 1;
-    if (tideLevel && tideLevel.lowerHalf) stars += 1;
-    ui.currentScore.textContent = stars ? '★'.repeat(stars) : '—';
+    const nowIndex = columns.findIndex((column) => column.time >= now);
+    const columnIndex = nowIndex >= 0 ? nowIndex : 0;
+    const { score, reasons } = columnScores[columnIndex];
+    ui.currentScore.textContent = score ? '★'.repeat(score) : '—';
+    ui.currentScore.title = reasons.length ? reasons.join(" \n") : "No score boosts.";
   }
 }
 
