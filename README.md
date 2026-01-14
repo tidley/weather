@@ -23,10 +23,18 @@ Edit the `config` block in `app.js`:
 - `timezone`
 - `windSpeedUnit` (use `kn` for knots)
 
-## Tides (RSS)
+## Tides (UKHO)
 
-The tide card pulls from an RSS feed by default, proxied locally to avoid CORS issues. Update the feed in `app.js`:
+The tide feed is pulled from the UKHO API and proxied locally to avoid CORS issues. Update the feed in `app.js`:
 
-- `config.tide.rssUrl` (RSS feed URL)
+- `config.tide.stationId` (UKHO station ID, e.g. `0085`)
 - `config.tide.sourceUrl` (link for the “Tide source” button)
-- `config.tide.corsProxy` (local proxy; defaults to `http://localhost:8787/rss?url=`)
+- `config.tide.apiUrl` (local proxy; defaults to `http://localhost:8787/tides`)
+
+Set your UKHO key before running the server:
+
+Create a `.env` file (see `.env.example`) with:
+
+```bash
+UKHO_KEY=your-key-here
+```

@@ -17,12 +17,8 @@
       <button class="ghost" id="refresh">Refresh</button>
     </header>
 
-    <section class="grid" aria-live="polite">
+    <section class="current-wrap" aria-live="polite">
       <article class="card current" id="current-card">
-        <div class="card-header">
-          <h2>Right now</h2>
-          <span class="pill" id="current-summary">—</span>
-        </div>
         <div class="current-stats">
           <div>
             <p class="label">Air temp</p>
@@ -44,58 +40,39 @@
           </div>
         </div>
       </article>
+    </section>
 
-      <article class="card tides" id="tides-card">
-        <div class="card-header">
-          <h2>Tides</h2>
-          <span class="pill" id="tide-source">RSS</span>
+    <section class="card forecast" id="forecast-card">
+      <div class="card-header">
+        <div>
+          <h2>Forecast</h2>
         </div>
-        <div class="tide-body" id="tides-body">
-          <p class="tide-empty" id="tide-status">Loading tide feed…</p>
-          <div class="tide-list" id="tide-list"></div>
-          <a class="link" id="tide-link" href="https://www.tidetimes.org.uk/hastings-tide-times" target="_blank" rel="noopener">Tide source</a>
-        </div>
-      </article>
-
-      <article class="card hourly" id="hourly-card">
-        <div class="card-header">
-          <h2>Next 12 hours</h2>
-          <span class="pill" id="hourly-window">—</span>
-        </div>
-        <div class="hourly-list" id="hourly-list"></div>
-      </article>
-
-      <article class="card daily" id="daily-card">
-        <div class="card-header">
-          <h2>7-day outlook</h2>
-          <span class="pill" id="daily-summary">—</span>
-        </div>
-        <div class="daily-list" id="daily-list"></div>
-      </article>
+      </div>
+      <div class="forecast-scroll">
+        <table class="forecast-grid" id="forecast-grid">
+          <thead>
+            <tr id="forecast-head-row">
+              <th class="label-cell">Date</th>
+            </tr>
+          </thead>
+          <tbody id="forecast-body"></tbody>
+        </table>
+      </div>
+      <div class="forecast-footer">
+        <a class="link" id="tide-link" href="https://admiraltyapi.portal.azure-api.net/" target="_blank" rel="noopener">Tide source</a>
+      </div>
     </section>
   </main>
 
   <div class="ambient"></div>
 
-  <template id="hourly-item">
-    <div class="hour">
-      <div class="hour-time"></div>
-      <div class="hour-temp"></div>
-      <div class="hour-wind">
-        <span class="arrow"></span>
-        <span class="wind-speed"></span>
+  <template id="forecast-cell">
+    <td class="data-cell">
+      <div class="cell-stack">
+        <span class="cell-main"></span>
+        <span class="cell-sub"></span>
       </div>
-      <div class="hour-precip"></div>
-    </div>
-  </template>
-
-  <template id="daily-item">
-    <div class="day">
-      <div class="day-name"></div>
-      <div class="day-temp"></div>
-      <div class="day-wind"></div>
-      <div class="day-precip"></div>
-    </div>
+    </td>
   </template>
 
   <script src="app.js" defer></script>

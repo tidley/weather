@@ -4,6 +4,13 @@ import { createReadStream } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+try {
+  const dotenv = await import("dotenv");
+  dotenv.config();
+} catch (error) {
+  // Optional dependency for local .env loading.
+}
+
 const PORT = process.env.PORT || 8787;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,11 +80,59 @@ async function handleRssProxy(req, res, url) {
   }
 }
 
+async function handleTidesProxy(req, res, url) {
+  const stationId = url.searchParams.get("station");
+  const apiKey = process.env.UKHO_KEY;
+  if (!apiKey) {
+    return sendJson(res, 500, {
+      error: "UKHO_KEY is not set. Add it to .env and restart the server.",
+    });
+  }
+  if (!stationId) {
+    return sendJson(res, 400, { error: "Missing station parameter." });
+  }
+
+  const upstream = new URL(
+    `https://admiraltyapi.azure-api.net/uktidalapi/api/V1/Stations/${stationId}/TidalEvents`
+  );
+  url.searchParams.forEach((value, key) => {
+    if (key !== "station") {
+      upstream.searchParams.set(key, value);
+    }
+  });
+
+  try {
+    const response = await fetch(upstream.toString(), {
+      headers: { "Ocp-Apim-Subscription-Key": apiKey },
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      return sendJson(res, response.status, {
+        error: `Upstream error: ${response.status}`,
+        details: body,
+      });
+    }
+    const body = await response.text();
+    res.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "max-age=300",
+    });
+    res.end(body);
+  } catch (error) {
+    sendJson(res, 502, { error: "Failed to fetch upstream." });
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   if (url.pathname === "/rss") {
     return handleRssProxy(req, res, url);
+  }
+
+  if (url.pathname === "/tides") {
+    return handleTidesProxy(req, res, url);
   }
 
   return serveStatic(req, res, url.pathname);
