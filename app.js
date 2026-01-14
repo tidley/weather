@@ -10,7 +10,7 @@ const config = {
     provider: 'ukho',
     stationId: '0085',
     sourceUrl: 'https://admiraltyapi.portal.azure-api.net/',
-    apiUrl: '/tides.php',
+    apiUrl: '/api/tides.php',
   },
 };
 
