@@ -99,7 +99,7 @@ function get_cached_entry(array $cache, string $station): array {
     }
     $entry = $cache[$station];
     $payload = $entry['payload'] ?? null;
-    $days = isset($entry['days']) ? (int)$entry['days'] : 0;
+    $storedDays = isset($entry['days']) ? (int)$entry['days'] : 0;
     $ts = isset($entry['ts']) ? (int)$entry['ts'] : 0;
 
     // payload stored as raw JSON string
@@ -107,11 +107,10 @@ function get_cached_entry(array $cache, string $station): array {
         return ['payload_string' => null, 'days' => 0, 'ts' => 0];
     }
 
-    // If days not stored (older cache format), compute it once.
-    if ($days <= 0) {
-        $decoded = json_decode($payload, true);
-        $days = is_null($decoded) ? 0 : count_distinct_days_from_payload($decoded);
-    }
+    // Always recompute days from payload so coverage matches the stored data.
+    $decoded = json_decode($payload, true);
+    $payloadDays = is_null($decoded) ? 0 : count_distinct_days_from_payload($decoded);
+    $days = $payloadDays > 0 ? $payloadDays : $storedDays;
 
     return ['payload_string' => $payload, 'days' => $days, 'ts' => $ts];
 }
