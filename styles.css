@@ -294,6 +294,28 @@ h2 {
   justify-items: center;
 }
 
+@media (max-width: 640px) {
+  .forecast-scroll {
+    padding-bottom: 10px;
+  }
+
+  .forecast-grid th,
+  .forecast-grid td {
+    padding: 4px 6px;
+  }
+
+  .label-cell {
+    min-width: 76px;
+    font-size: 0.75rem;
+    padding-left: 10px;
+    padding-right: 6px;
+  }
+
+  .cell-stack {
+    gap: 1px;
+  }
+}
+
 .cell-main {
   font-weight: 600;
   color: var(--ink);
