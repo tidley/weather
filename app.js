@@ -839,7 +839,7 @@ function renderForecast(data, tideEvents) {
     { label: 'Time', key: 'time' },
     { label: 'KI', key: 'ki' },
     { label: 'Temp (°C)', key: 'temperature_2m' },
-    { label: 'Wind power (kt)', key: 'wind_power' },
+    { label: 'Wind (kt)', key: 'wind_power' },
     { label: 'Direction', key: 'wind_direction_10m' },
     { label: 'Rain (mm)', key: 'precipitation' },
     { label: 'Sky', key: 'sky' },
