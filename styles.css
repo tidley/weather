@@ -314,6 +314,31 @@ h2 {
   .cell-stack {
     gap: 1px;
   }
+
+  .forecast {
+    border-radius: 0;
+    margin-left: calc(-5vw);
+    margin-right: calc(-5vw);
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .forecast .card-header,
+  .forecast .forecast-scroll {
+    padding-left: 5vw;
+    padding-right: 5vw;
+  }
+
+  .forecast .card-header {
+    padding-top: 18px;
+    padding-bottom: 6px;
+  }
+
+  .forecast .forecast-scroll {
+    padding-bottom: 12px;
+  }
 }
 
 .cell-main {

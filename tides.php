@@ -23,7 +23,7 @@ $forceRefresh = (isset($_GET['refresh']) && (string)$_GET['refresh'] === '1');
 $cacheFile = __DIR__ . '/tides-cache.json';
 
 // Secondary safety TTL (optional but recommended). Set to 0 to disable TTL checks.
-$ttlSeconds = 0; // e.g. 10 * 60 for 10 minutes
+$ttlSeconds = 24 * 60 * 60; // refresh every 24 hours
 $minDaysRequired = 6;
 
 function read_cache(string $path): array {

@@ -67,6 +67,29 @@ const formatTideTime = new Intl.DateTimeFormat('en-GB', {
   minute: '2-digit',
 });
 
+const forecastScrollContainer = document.querySelector('.forecast-scroll');
+let forecastLabelsCollapsed = false;
+
+function applyForecastLabelMode(useShort) {
+  document.querySelectorAll('.label-cell').forEach((label) => {
+    const full = label.dataset.fullLabel || label.textContent;
+    const short = label.dataset.abbrev || full;
+    label.textContent = useShort ? short : full;
+  });
+}
+
+function updateForecastLabelModeFromScroll() {
+  if (!forecastScrollContainer) return;
+  const shouldCollapse = forecastScrollContainer.scrollLeft > 8;
+  if (shouldCollapse === forecastLabelsCollapsed) return;
+  forecastLabelsCollapsed = shouldCollapse;
+  applyForecastLabelMode(forecastLabelsCollapsed);
+}
+
+if (forecastScrollContainer) {
+  forecastScrollContainer.addEventListener('scroll', updateForecastLabelModeFromScroll);
+}
+
 function setLocation() {
   if (ui.locationName) ui.locationName.textContent = config.locationName;
 }
@@ -811,12 +834,12 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
 function renderForecast(data, tideEvents) {
   ui.forecastHeadRow.innerHTML = '';
   ui.forecastBody.innerHTML = '';
-  ui.forecastHeadRow.appendChild(
-    Object.assign(document.createElement('th'), {
-      className: 'label-cell',
-      textContent: 'Date',
-    }),
-  );
+  const dateLabel = document.createElement('th');
+  dateLabel.className = 'label-cell';
+  dateLabel.dataset.fullLabel = 'Date';
+  dateLabel.dataset.abbrev = 'Day';
+  dateLabel.textContent = 'Date';
+  ui.forecastHeadRow.appendChild(dateLabel);
 
   const times = data.hourly.time.map((time) => new Date(time));
   const now = new Date();
@@ -836,16 +859,16 @@ function renderForecast(data, tideEvents) {
   }
 
   const rows = [
-    { label: 'Time', key: 'time' },
-    { label: 'KI', key: 'ki' },
-    { label: 'Temp (°C)', key: 'temperature_2m' },
-    { label: 'Wind (kt)', key: 'wind_power' },
-    { label: 'Direction', key: 'wind_direction_10m' },
-    { label: 'Rain (mm)', key: 'precipitation' },
-    { label: 'Sky', key: 'sky' },
-    { label: 'Moon', key: 'moon' },
-    { label: 'Tide (m)', key: 'tide' },
-    { label: 'Tide curve', key: 'tide_curve' },
+    { label: 'Time', abbrev: 'Time', key: 'time' },
+    { label: 'KI', abbrev: 'KI', key: 'ki' },
+    { label: 'Temp (°C)', abbrev: 'Temp', key: 'temperature_2m' },
+    { label: 'Wind (kt)', abbrev: 'Wind', key: 'wind_power' },
+    { label: 'Direction', abbrev: 'Dir', key: 'wind_direction_10m' },
+    { label: 'Rain (mm)', abbrev: 'Rain', key: 'precipitation' },
+    { label: 'Sky', abbrev: 'Sky', key: 'sky' },
+    { label: 'Moon', abbrev: 'Moon', key: 'moon' },
+    { label: 'Tide (m)', abbrev: 'Tide', key: 'tide' },
+    { label: 'Tide curve', abbrev: 'Curve', key: 'tide_curve' },
   ];
 
   const tideHeights = tideEvents
@@ -890,6 +913,8 @@ function renderForecast(data, tideEvents) {
     const tr = document.createElement('tr');
     const label = document.createElement('th');
     label.className = 'label-cell';
+    label.dataset.fullLabel = row.label;
+    label.dataset.abbrev = row.abbrev || row.label;
     label.textContent = row.label;
     if (row.key === 'precipitation') {
       label.title = 'Precipitation probability (%) and amount.';
@@ -1140,6 +1165,11 @@ function renderForecast(data, tideEvents) {
       ? reasons.join(' \n')
       : 'No score boosts.';
   }
+
+  const shouldCollapse =
+    forecastScrollContainer && forecastScrollContainer.scrollLeft > 8;
+  forecastLabelsCollapsed = Boolean(shouldCollapse);
+  applyForecastLabelMode(forecastLabelsCollapsed);
 }
 
 function saveCache(weather, tides) {
