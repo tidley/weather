@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Forecast</title>
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js" defer></script>
 </head>
 <body>
   <main class="app">
@@ -25,7 +26,10 @@
             <p class="value" id="current-temp">—</p>
           </div>
           <div>
-            <p class="label">Wind</p>
+            <p class="label label-with-icon">
+              <span class="iconify meteocons-icon label-icon" data-icon="meteocons:wind-fill" aria-hidden="true"></span>
+              Wind
+            </p>
             <p class="value" id="current-wind">—</p>
             <p class="subvalue wind-summary">
               <span class="arrow summary-arrow" id="current-wind-arrow" aria-hidden="true"></span>
@@ -40,7 +44,7 @@
             <p class="label">Precip</p>
             <p class="value" id="current-precip">—</p>
             <p class="subvalue summary-cloud">
-              <span class="weather-icon" id="current-cloud-icon" aria-hidden="true">—</span>
+              <span class="iconify meteocons-icon" id="current-cloud-icon" data-icon="meteocons:cloudy-fill" aria-hidden="true"></span>
               <span id="current-cloud">—</span>
             </p>
           </div>
@@ -69,6 +73,14 @@
         </table>
       </div>
     </section>
+
+    <footer class="page-footer">
+      <p>
+        Weather data: <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> ·
+        Tide data: <a href="https://www.admiralty.co.uk/" target="_blank" rel="noreferrer">UKHO Admiralty</a> ·
+        Icons: <a href="https://basmilius.github.io/meteocons/" target="_blank" rel="noreferrer">Meteocons</a>
+      </p>
+    </footer>
   </main>
 
   <div class="ambient"></div>
