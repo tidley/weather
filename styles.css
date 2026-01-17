@@ -264,6 +264,17 @@ h2 {
   font-weight: 600;
   z-index: 2;
   min-width: 120px;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* When the user scrolls horizontally (common on mobile), reclaim space by
+   narrowing the sticky title column without changing its text. */
+.forecast-scrolled .label-cell {
+  min-width: 88px;
+  max-width: 88px;
 }
 
 .data-cell {
@@ -306,9 +317,15 @@ h2 {
 
   .label-cell {
     min-width: 76px;
+    max-width: 76px;
     font-size: 0.75rem;
     padding-left: 10px;
     padding-right: 6px;
+  }
+
+  .forecast-scrolled .label-cell {
+    min-width: 56px;
+    max-width: 56px;
   }
 
   .cell-stack {

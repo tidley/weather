@@ -132,6 +132,9 @@ $canServeCache = (!$forceRefresh && $cached['payload_string'] !== null && $cover
 if ($canServeCache) {
     header('X-Cache: HIT');
     header('X-Coverage-Days: ' . $cached['days']);
+    if ($cached['ts'] > 0) {
+        header('X-Updated-At: ' . gmdate('c', $cached['ts']));
+    }
     echo $cached['payload_string'];
     exit;
 }
@@ -185,4 +188,5 @@ write_cache($cacheFile, $cache);
 
 header('X-Cache: MISS');
 header('X-Coverage-Days: ' . $newDays);
+header('X-Updated-At: ' . gmdate('c', $now));
 echo $response;
