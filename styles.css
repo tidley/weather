@@ -257,6 +257,28 @@ h2 {
 .forecast-scroll {
   overflow-x: auto;
   padding-bottom: 4px;
+  scrollbar-gutter: stable;
+  scrollbar-color: rgba(120, 160, 210, 0.6) rgba(6, 14, 22, 0.6);
+  scrollbar-width: thin;
+}
+
+.forecast-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.forecast-scroll::-webkit-scrollbar-track {
+  background: rgba(6, 14, 22, 0.6);
+  border-radius: 999px;
+}
+
+.forecast-scroll::-webkit-scrollbar-thumb {
+  background: rgba(120, 160, 210, 0.6);
+  border-radius: 999px;
+  border: 2px solid rgba(6, 14, 22, 0.6);
+}
+
+.forecast-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(145, 185, 235, 0.8);
 }
 
 .forecast-grid {
