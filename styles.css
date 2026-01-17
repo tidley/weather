@@ -510,8 +510,21 @@ h2 {
   fill: var(--ink);
 }
 
+.tide-label.predicted {
+  fill: var(--muted);
+  opacity: 0.8;
+}
+
 .tide-marker {
   fill: var(--sun);
+}
+
+.tide-marker.predicted {
+  fill: rgba(155, 178, 200, 0.7);
+}
+
+.tide-predicted-zone {
+  fill: rgba(2, 6, 11, 0.55);
 }
 
 .tide-curve-cell {
