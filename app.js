@@ -705,13 +705,18 @@ function extendTideEvents(tideEvents, horizonEnd) {
   const last = base[base.length - 1];
   if (last.date >= horizonEnd) return base;
 
-  let lastKnownHeight = null;
+  let lastHigh = null;
+  let lastLow = null;
   for (let i = base.length - 1; i >= 0; i -= 1) {
     const value = parseHeightNumber(base[i].height);
-    if (value !== null) {
-      lastKnownHeight = value;
-      break;
+    if (value === null) continue;
+    if (base[i].type === 'HIGH' && lastHigh === null) {
+      lastHigh = value;
     }
+    if (base[i].type === 'LOW' && lastLow === null) {
+      lastLow = value;
+    }
+    if (lastHigh !== null && lastLow !== null) break;
   }
 
   // Estimate typical interval between consecutive events (HW->LW or LW->HW).
@@ -729,10 +734,16 @@ function extendTideEvents(tideEvents, horizonEnd) {
     nextType = nextType === 'HIGH' ? 'LOW' : 'HIGH';
     nextTime = new Date(nextTime.getTime() + step);
 
+    const cap =
+      nextType === 'HIGH'
+        ? lastHigh
+        : nextType === 'LOW'
+        ? lastLow
+        : null;
     const heightText =
-      lastKnownHeight === null || !Number.isFinite(lastKnownHeight)
+      cap === null || !Number.isFinite(cap)
         ? null
-        : `${Math.max(lastKnownHeight, 0).toFixed(2)}m`;
+        : `${Math.max(cap, 0).toFixed(2)}m`;
 
     base.push({
       type: nextType,
