@@ -186,7 +186,7 @@ function lerpColor(start, end, t) {
 function timeGradient(time) {
   const hour = time.getHours() + time.getMinutes() / 60;
   const t = hour <= 12 ? hour / 12 : (24 - hour) / 12;
-  return lerpColor('#081420', '#1e4e9c', t);
+  return lerpColor('#02060b', '#1e4e9c', t);
 }
 
 function toRad(degrees) {
@@ -659,10 +659,13 @@ function kiteIndex({
   );
 
   let sd = 0.2;
-  if (windDirDegrees >= 135 && windDirDegrees <= 225) {
-    sd = 1;
-  } else if (windDirDegrees >= 100 && windDirDegrees <= 260) {
-    sd = 0.7;
+  if (Number.isFinite(windDirDegrees)) {
+    const dir = ((windDirDegrees % 360) + 360) % 360;
+    if (dir >= 135 && dir <= 225) {
+      sd = 1;
+    } else if ((dir >= 45 && dir < 135) || (dir > 225 && dir <= 315)) {
+      sd = 0.75;
+    }
   }
   const directionLabel = Number.isFinite(windDirDegrees)
     ? `${Math.round(windDirDegrees)}°`
@@ -678,15 +681,17 @@ function kiteIndex({
   }
   reasons.push(`S_t tide: ${st.toFixed(2)} (prefers mid-high)`);
 
-  const sl = isDaylightNow ? 1.0 : 0.1;
-  reasons.push(`S_l daylight: ${sl.toFixed(2)} (${isDaylightNow ? 'day' : 'night'})`);
+  const sl = isDaylightNow ? 1.0 : 0.0;
+  reasons.push(
+    `S_l daylight: ${sl.toFixed(2)} (${isDaylightNow ? 'day' : 'night'})`,
+  );
 
   const ki =
-    Math.pow(sw, 0.35) *
-    Math.pow(sg, 0.3) *
+    Math.pow(sw, 0.33) *
+    Math.pow(sg, 0.27) *
     Math.pow(sd, 0.2) *
     Math.pow(st, 0.1) *
-    Math.pow(sl, 0.05);
+    Math.pow(sl, 0.1);
 
   let stars = 0;
   if (ki >= 0.8) stars = 5;
@@ -1028,7 +1033,7 @@ function renderForecast(data, tideEvents) {
         `KI ${columnScores[index].ki.toFixed(2)} · ${'★'.repeat(
           columnScores[index].stars,
         )}\n` +
-        'Formula: (S_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05)\n' +
+        'Formula: (S_w^0.33 × S_g^0.27 × S_d^0.20 × S_t^0.10 × S_l^0.10)\n' +
         `Scores:\n${columnScores[index].reasons.join('\n')}`;
     }
   });
@@ -1096,7 +1101,7 @@ function renderForecast(data, tideEvents) {
         ]);
         const midColor = lerpColor(windColor, gustColor, 0.5);
         const cell = buildDataCell(
-          `${Math.round(speed)} → ${Math.round(gusts)}`,
+          `${Math.round(speed)}→${Math.round(gusts)}`,
           '',
           `linear-gradient(90deg, ${windColor} 0%, ${midColor} 50%, ${gustColor} 100%)`,
         );
@@ -1130,16 +1135,7 @@ function renderForecast(data, tideEvents) {
         const tideText = tideForWindow(tideSeries, windowStart, windowEnd);
         const tideLevel = tideLevelAt(tideSeries, windowStart);
         const heightValue = tideLevel ? tideLevel.height : null;
-        const cell = buildDataCell(
-          tideText,
-          '',
-          colorForValue(heightValue, [
-            { value: 0, color: '#081420' },
-            { value: 2, color: '#0f2538' },
-            { value: 4, color: '#163a5a' },
-            { value: 6, color: '#2c6bbf' },
-          ]),
-        );
+        const cell = buildDataCell(tideText, '');
         applyColumnWash(cell, columnScores[colIndex].stars);
         tr.appendChild(cell);
         return;
@@ -1252,7 +1248,7 @@ function renderForecast(data, tideEvents) {
         );
         cell.title =
           `KI ${ki.toFixed(2)} (${stars}★)\n` +
-          'Formula: (S_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05)\n' +
+          'Formula: (S_w^0.33 × S_g^0.27 × S_d^0.20 × S_t^0.10 × S_l^0.10)\n' +
           `Scores:\n${reasons.join('\n')}`;
         const sub = cell.querySelector('.cell-sub');
         if (sub) {
