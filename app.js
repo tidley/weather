@@ -639,7 +639,9 @@ function kiteIndex({
     windValue <= 18
       ? clamp((windValue - 12) / (18 - 12))
       : clamp(1 - (windValue - 18) / (25 - 18));
-  reasons.push(`Wind ${Math.round(windValue)} kt → S_w ${sw.toFixed(2)}`);
+  reasons.push(
+    `S_w wind speed: ${sw.toFixed(2)} (wind ${Math.round(windValue)} kt)`,
+  );
 
   const gustFactor = windValue ? gustSpeed / windValue : null;
   let sg = 0;
@@ -650,19 +652,22 @@ function kiteIndex({
   }
   reasons.push(
     gustFactor !== null
-      ? `Gust factor ${gustFactor.toFixed(2)} → S_g ${sg.toFixed(2)}`
-      : 'Gust factor n/a',
+      ? `S_g gust steadiness: ${sg.toFixed(2)} (gust factor ${gustFactor.toFixed(
+          2,
+        )})`
+      : 'S_g gust steadiness: n/a',
   );
 
-  let sd = 0.7;
+  let sd = 0.2;
   if (windDirDegrees >= 135 && windDirDegrees <= 225) {
     sd = 1;
   } else if (windDirDegrees >= 100 && windDirDegrees <= 260) {
     sd = 0.7;
-  } else {
-    sd = 0;
   }
-  reasons.push(`Direction → S_d ${sd.toFixed(1)}`);
+  const directionLabel = Number.isFinite(windDirDegrees)
+    ? `${Math.round(windDirDegrees)}°`
+    : 'n/a';
+  reasons.push(`S_d direction: ${sd.toFixed(2)} (${directionLabel})`);
 
   let st = 0.5;
   if (tideLevel && tideRange && tideRange.max > tideRange.min) {
@@ -671,10 +676,10 @@ function kiteIndex({
     );
     st = clamp(1 - Math.abs(tNorm - 0.6) / 0.6);
   }
-  reasons.push(`Tide → S_t ${st.toFixed(2)}`);
+  reasons.push(`S_t tide: ${st.toFixed(2)} (prefers mid-high)`);
 
   const sl = isDaylightNow ? 1.0 : 0.1;
-  reasons.push(`Daylight → S_l ${sl.toFixed(1)}`);
+  reasons.push(`S_l daylight: ${sl.toFixed(2)} (${isDaylightNow ? 'day' : 'night'})`);
 
   const ki =
     Math.pow(sw, 0.35) *
@@ -1019,11 +1024,12 @@ function renderForecast(data, tideEvents) {
   headerCells.forEach((cell, index) => {
     if (columnScores[index]) {
       applyColumnWash(cell, columnScores[index].stars);
-      cell.title = `KI ${columnScores[index].ki.toFixed(2)} · ${'★'.repeat(
-        columnScores[index].stars,
-      )}\nS_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05\n${columnScores[
-        index
-      ].reasons.join('\n')}`;
+      cell.title =
+        `KI ${columnScores[index].ki.toFixed(2)} · ${'★'.repeat(
+          columnScores[index].stars,
+        )}\n` +
+        'Formula: (S_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05)\n' +
+        `Scores:\n${columnScores[index].reasons.join('\n')}`;
     }
   });
 
@@ -1181,8 +1187,9 @@ function renderForecast(data, tideEvents) {
 
       if (row.key === 'sky') {
         const cloud = data.hourly.cloud_cover[column.index];
+        const icon = skyIcon(cloud, column.time);
         const cell = buildDataCell(
-          skyIcon(cloud, column.time),
+          icon,
           `${Math.round(cloud)}%`,
           colorForValue(cloud, [
             { value: 0, color: '#1e4e9c' },
@@ -1191,9 +1198,13 @@ function renderForecast(data, tideEvents) {
             { value: 80, color: '#081420' },
           ]),
         );
+        cell.classList.add('sky-cell');
         const main = cell.querySelector('.cell-main');
         if (main) {
-          main.style.fontSize = '1.2rem';
+          main.classList.add('weather-icon');
+          if (icon.includes('☁️') && icon.includes('🌙')) {
+            main.classList.add('weather-icon-double');
+          }
           main.style.color = cloud < 20 ? '#ffd54a' : 'var(--ink)';
         }
         applyColumnWash(cell, columnScores[colIndex].stars);
@@ -1208,9 +1219,10 @@ function renderForecast(data, tideEvents) {
           `${Math.round(illumination * 100)}%`,
           timeGradient(column.time),
         );
+        cell.classList.add('moon-cell');
         const main = cell.querySelector('.cell-main');
         if (main) {
-          main.style.fontSize = '1.15rem';
+          main.classList.add('weather-icon');
         }
         applyColumnWash(cell, columnScores[colIndex].stars);
         tr.appendChild(cell);
@@ -1240,8 +1252,8 @@ function renderForecast(data, tideEvents) {
         );
         cell.title =
           `KI ${ki.toFixed(2)} (${stars}★)\n` +
-          'S_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05\n' +
-          reasons.join('\n');
+          'Formula: (S_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05)\n' +
+          `Scores:\n${reasons.join('\n')}`;
         const sub = cell.querySelector('.cell-sub');
         if (sub) {
           sub.classList.add(stars ? 'ki-stars' : 'ki-zero');
