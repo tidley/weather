@@ -1222,6 +1222,9 @@ function renderForecast(data, tideEvents) {
     if (row.key === 'ki') {
       label.title = 'Kiteability Index (0-1) mapped to stars';
     }
+    if (row.key === 'tide_curve') {
+      label.title = 'Dark region indicates predicted tides';
+    }
     tr.appendChild(label);
 
     if (row.key === 'tide_curve') {
