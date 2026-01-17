@@ -130,10 +130,27 @@ $coverageOk = ($cached['days'] >= $minDaysRequired);
 $canServeCache = (!$forceRefresh && $cached['payload_string'] !== null && $ttlOk);
 
 if ($canServeCache) {
+    $ttlHeader = $ttlSeconds > 0 ? $ttlSeconds : 3600;
+    if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) && $cached['ts'] > 0) {
+        $since = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']);
+        if ($since !== false && $since >= $cached['ts']) {
+            header('X-Cache: ' . ($coverageOk ? 'HIT' : 'HIT-PARTIAL'));
+            header('X-Coverage-Days: ' . $cached['days']);
+            header('X-Updated-At: ' . gmdate('c', $cached['ts']));
+            header('Cache-Control: public, max-age=' . $ttlHeader . ', stale-while-revalidate=300');
+            header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $cached['ts']) . ' GMT');
+            http_response_code(304);
+            exit;
+        }
+    }
     header('X-Cache: ' . ($coverageOk ? 'HIT' : 'HIT-PARTIAL'));
     header('X-Coverage-Days: ' . $cached['days']);
     if ($cached['ts'] > 0) {
         header('X-Updated-At: ' . gmdate('c', $cached['ts']));
+    }
+    header('Cache-Control: public, max-age=' . $ttlHeader . ', stale-while-revalidate=300');
+    if ($cached['ts'] > 0) {
+        header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $cached['ts']) . ' GMT');
     }
     echo $cached['payload_string'];
     exit;
@@ -189,4 +206,6 @@ write_cache($cacheFile, $cache);
 header('X-Cache: MISS');
 header('X-Coverage-Days: ' . $newDays);
 header('X-Updated-At: ' . gmdate('c', $now));
+header('Cache-Control: public, max-age=' . ($ttlSeconds > 0 ? $ttlSeconds : 3600) . ', stale-while-revalidate=300');
+header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $now) . ' GMT');
 echo $response;
