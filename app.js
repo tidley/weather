@@ -693,9 +693,8 @@ function linearFit(points) {
 }
 
 function extendTideEvents(tideEvents, horizonEnd) {
-  // Extends HW/LW events to horizonEnd using empirical cadence + height trend.
-  // This is not a full harmonic constituent model, but it is stable enough to
-  // provide a coherent multi-day curve when the upstream feed is limited.
+  // Extends HW/LW events to horizonEnd using empirical cadence.
+  // Predicted events keep the last known height to avoid false precision.
   const base = tideEvents
     .filter((e) => e.date instanceof Date && !Number.isNaN(e.date.getTime()))
     .map((e) => ({ ...e }))
@@ -706,6 +705,15 @@ function extendTideEvents(tideEvents, horizonEnd) {
   const last = base[base.length - 1];
   if (last.date >= horizonEnd) return base;
 
+  let lastKnownHeight = null;
+  for (let i = base.length - 1; i >= 0; i -= 1) {
+    const value = parseHeightNumber(base[i].height);
+    if (value !== null) {
+      lastKnownHeight = value;
+      break;
+    }
+  }
+
   // Estimate typical interval between consecutive events (HW->LW or LW->HW).
   const deltas = [];
   for (let i = 1; i < base.length; i++) {
@@ -714,21 +722,6 @@ function extendTideEvents(tideEvents, horizonEnd) {
   }
   const step = median(deltas) || 6.21 * 60 * 60 * 1000; // ~6h 12m 36s
 
-  // Fit separate height trends for HW and LW using recent history.
-  const recent = base.slice(-24);
-  const pointsHW = recent
-    .filter((e) => e.type === 'HIGH')
-    .map((e) => ({ x: e.date.getTime(), y: parseHeightNumber(e.height) }));
-  const pointsLW = recent
-    .filter((e) => e.type === 'LOW')
-    .map((e) => ({ x: e.date.getTime(), y: parseHeightNumber(e.height) }));
-  const fitHW = linearFit(pointsHW);
-  const fitLW = linearFit(pointsLW);
-
-  // Fall back to medians if fit is unavailable.
-  const hwMedian = median(pointsHW.map((p) => p.y));
-  const lwMedian = median(pointsLW.map((p) => p.y));
-
   // Continue alternating event types.
   let nextType = last.type;
   let nextTime = new Date(last.date.getTime());
@@ -736,18 +729,10 @@ function extendTideEvents(tideEvents, horizonEnd) {
     nextType = nextType === 'HIGH' ? 'LOW' : 'HIGH';
     nextTime = new Date(nextTime.getTime() + step);
 
-    const tms = nextTime.getTime();
-    let predictedHeight = null;
-    if (nextType === 'HIGH') {
-      predictedHeight = fitHW ? fitHW.slope * tms + fitHW.intercept : hwMedian;
-    } else {
-      predictedHeight = fitLW ? fitLW.slope * tms + fitLW.intercept : lwMedian;
-    }
-
     const heightText =
-      predictedHeight === null || !Number.isFinite(predictedHeight)
+      lastKnownHeight === null || !Number.isFinite(lastKnownHeight)
         ? null
-        : `${Math.max(predictedHeight, 0).toFixed(2)}m`;
+        : `${Math.max(lastKnownHeight, 0).toFixed(2)}m`;
 
     base.push({
       type: nextType,
@@ -969,6 +954,9 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
   const events = tideEvents.filter(
     (event) => event.date && event.date >= start && event.date <= end,
   );
+  const lastObservedDate = events
+    .filter((event) => !event.predicted)
+    .reduce((latest, event) => (latest && latest > event.date ? latest : event.date), null);
   const startLevel = tideLevelAt(tideEvents, start);
   if (startLevel) {
     events.push({
@@ -1014,6 +1002,20 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
   }
 
   if (!points.length) return;
+
+  if (lastObservedDate) {
+    const cutoffX = scaleX(lastObservedDate);
+    const shade = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'rect',
+    );
+    shade.setAttribute('x', cutoffX);
+    shade.setAttribute('y', 0);
+    shade.setAttribute('width', Math.max(0, svgWidth - cutoffX));
+    shade.setAttribute('height', svgHeight);
+    shade.setAttribute('class', 'tide-predicted-zone');
+    svg.appendChild(shade);
+  }
 
   events.forEach((event) => {
     if (!event.type || (event.type !== 'HIGH' && event.type !== 'LOW')) return;
@@ -1067,7 +1069,10 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
     circle.setAttribute('cx', cx);
     circle.setAttribute('cy', cy);
     circle.setAttribute('r', '3');
-    circle.setAttribute('class', 'tide-marker');
+    circle.setAttribute(
+      'class',
+      event.predicted ? 'tide-marker predicted' : 'tide-marker',
+    );
     svg.appendChild(circle);
 
     if (
@@ -1081,7 +1086,10 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
       label.setAttribute('x', cx);
       label.setAttribute('y', Math.max(cy - 6, padding - 2));
       label.setAttribute('text-anchor', 'middle');
-      label.setAttribute('class', 'tide-label');
+      label.setAttribute(
+        'class',
+        event.predicted ? 'tide-label predicted' : 'tide-label',
+      );
       label.textContent = `${event.timeText} · ${event.height}`;
       svg.appendChild(label);
       renderTideChart.lastLabelX = cx;
