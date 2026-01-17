@@ -76,6 +76,7 @@ const formatTideTime = new Intl.DateTimeFormat('en-GB', {
   minute: '2-digit',
 });
 
+const CACHE_STALE_MS = 24 * 60 * 60 * 1000;
 const forecastScrollContainer = document.querySelector('.forecast-scroll');
 function updateForecastStickyLabelModeFromScroll() {
   if (!forecastScrollContainer) return;
@@ -756,7 +757,7 @@ function applyColumnWash(cell, stars) {
 
 function buildDirectionCell(direction, degrees) {
   const cell = document.createElement('td');
-  cell.className = 'data-cell';
+  cell.className = 'data-cell wind-direction-cell';
   const wrapper = document.createElement('div');
   wrapper.className = 'wind-cell';
   const arrow = document.createElement('span');
@@ -1354,7 +1355,7 @@ function renderFromCache() {
       });
   }
 
-  return true;
+  return cached;
 }
 
 function handleError(error) {
@@ -1402,7 +1403,11 @@ if (ui.refresh) {
 }
 
 setLocation();
-const hasCache = renderFromCache();
-if (!hasCache) {
+const cacheResult = renderFromCache();
+const cacheFresh =
+  cacheResult &&
+  cacheResult.updated &&
+  Date.now() - cacheResult.updated < CACHE_STALE_MS;
+if (!cacheFresh) {
   loadForecast({ force: false });
 }

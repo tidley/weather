@@ -139,25 +139,32 @@ h2 {
 
 .current-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
 }
 
-.label {
-  margin: 0 0 6px;
+.current {
+  padding: 14px 16px;
+}
+
+.current-stats .label {
+  margin: 0 0 4px;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
 }
 
-.value {
+.current-stats .value {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 1.4rem;
   font-weight: 600;
+  line-height: 1.1;
 }
 
-.subvalue {
-  margin: 4px 0 0;
+.current-stats .subvalue {
+  margin: 2px 0 0;
   color: var(--muted);
+  font-size: 0.72rem;
 }
 
 .current-wrap {
@@ -230,12 +237,12 @@ h2 {
 .forecast-grid {
   border-collapse: collapse;
   width: max-content;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .forecast-grid th,
 .forecast-grid td {
-  padding: 6px 8px;
+  padding: 7px 6px;
   border-bottom: 1px solid rgba(231, 242, 255, 0.08);
   text-align: center;
   white-space: nowrap;
@@ -248,7 +255,7 @@ h2 {
 }
 
 .forecast-grid thead .cell-main {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .forecast-grid thead .cell-sub {
@@ -275,10 +282,11 @@ h2 {
 .forecast-scrolled .label-cell {
   min-width: 88px;
   max-width: 88px;
+  min-width: 104px;
 }
 
 .data-cell {
-  min-width: 62px;
+  min-width: 54px;
   border-left: 1px solid rgba(231, 242, 255, 0.04);
 }
 
@@ -379,7 +387,7 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .wind-cell .arrow {
@@ -388,6 +396,11 @@ h2 {
 
 .wind-cell .cell-main {
   color: #f3f7ff;
+}
+
+.wind-direction-cell .cell-main {
+  font-size: 0.78rem;
+  letter-spacing: 0.3px;
 }
 
 .score-0 .cell-main {
@@ -472,7 +485,7 @@ h2 {
 
 .arrow {
   display: inline-block;
-  width: 18px;
+  width: 16px;
   height: 2px;
   background: var(--accent);
   border-radius: 999px;
@@ -485,9 +498,9 @@ h2 {
 .arrow::after {
   content: "";
   position: absolute;
-  right: -6px;
+  right: -5px;
   top: -5px;
-  border: 6px solid transparent;
+  border: 5px solid transparent;
   border-left-color: var(--accent);
 }
 
@@ -549,21 +562,25 @@ h2 {
     font-size: clamp(1.2rem, 5.4vw, 2rem);
   }
 
-  .value {
+  .current-stats .value {
     font-size: 1.2rem;
   }
 
-  .label {
+  .current-stats .label {
     font-size: 0.72rem;
   }
 
+  .current-stats .subvalue {
+    font-size: 0.65rem;
+  }
+
   .label-cell {
-    min-width: 64px;
+    min-width: 58px;
     font-size: 0.65rem;
   }
 
   .data-cell {
-    min-width: 52px;
+    min-width: 48px;
   }
 
   .forecast-grid th,
