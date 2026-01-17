@@ -255,15 +255,15 @@ h2 {
 }
 
 .forecast-scroll {
-  overflow-x: auto;
+  overflow-x: scroll;
   padding-bottom: 4px;
   scrollbar-gutter: stable;
-  scrollbar-color: rgba(120, 160, 210, 0.6) rgba(6, 14, 22, 0.6);
-  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 160, 210, 0.7) rgba(6, 14, 22, 0.7);
+  scrollbar-width: auto;
 }
 
 .forecast-scroll::-webkit-scrollbar {
-  height: 10px;
+  height: 14px;
 }
 
 .forecast-scroll::-webkit-scrollbar-track {
@@ -272,9 +272,9 @@ h2 {
 }
 
 .forecast-scroll::-webkit-scrollbar-thumb {
-  background: rgba(120, 160, 210, 0.6);
+  background: rgba(120, 160, 210, 0.75);
   border-radius: 999px;
-  border: 2px solid rgba(6, 14, 22, 0.6);
+  border: 3px solid rgba(6, 14, 22, 0.7);
 }
 
 .forecast-scroll::-webkit-scrollbar-thumb:hover {
