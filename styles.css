@@ -403,7 +403,7 @@ h2 {
 }
 
 .meteocons-icon {
-  font-size: 1rem;
+  font-size: 2rem;
   line-height: 1;
   color: #dbe7ff;
 }
@@ -415,7 +415,7 @@ h2 {
 }
 
 .label-icon {
-  font-size: 0.9rem;
+  font-size: 1.8rem;
   opacity: 0.85;
 }
 
@@ -697,11 +697,11 @@ h2 {
   }
 
   .meteocons-icon {
-    font-size: 0.85rem;
+    font-size: 1.7rem;
   }
 
   .label-icon {
-    font-size: 0.8rem;
+    font-size: 1.4rem;
   }
 
   .arrow {
