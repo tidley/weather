@@ -7,18 +7,26 @@ const config = {
   timezone: 'Europe/London',
   windSpeedUnit: 'kn',
   forecastWindowHours: 2,
-  forecastDays: 7,
+  // Open-Meteo Forecast API supports up to 16 days via forecast_days.
+  forecastDays: 16,
+  weather: {
+    // Server-side cached proxy.
+    apiUrl: '/weather.php',
+  },
   tide: {
     provider: 'ukho',
     stationId: '0085',
     sourceUrl: 'https://admiraltyapi.portal.azure-api.net/',
     apiUrl: '/tides.php',
+    // Minimum tide coverage to extend to (days). Weather horizon is 16 days.
+    predictDays: 16,
   },
 };
 
 const ui = {
   locationName: document.getElementById('location-name'),
-  lastUpdated: document.getElementById('last-updated'),
+  weatherUpdated: document.getElementById('weather-updated'),
+  tidesUpdated: document.getElementById('tides-updated'),
   currentSummary: document.getElementById('current-summary'),
   currentTemp: document.getElementById('current-temp'),
   currentWind: document.getElementById('current-wind'),
@@ -40,7 +48,8 @@ const ui = {
 const cacheKeys = {
   weather: 'forecast.weather',
   tides: 'forecast.tides',
-  updated: 'forecast.updated',
+  weatherUpdatedAt: 'forecast.weatherUpdatedAt',
+  tidesUpdatedAt: 'forecast.tidesUpdatedAt',
 };
 
 const formatWindow = new Intl.DateTimeFormat('en-GB', {
@@ -68,26 +77,34 @@ const formatTideTime = new Intl.DateTimeFormat('en-GB', {
 });
 
 const forecastScrollContainer = document.querySelector('.forecast-scroll');
-let forecastLabelsCollapsed = false;
-
-function applyForecastLabelMode(useShort) {
-  document.querySelectorAll('.label-cell').forEach((label) => {
-    const full = label.dataset.fullLabel || label.textContent;
-    const short = label.dataset.abbrev || full;
-    label.textContent = useShort ? short : full;
-  });
-}
-
-function updateForecastLabelModeFromScroll() {
+function updateForecastStickyLabelModeFromScroll() {
   if (!forecastScrollContainer) return;
-  const shouldCollapse = forecastScrollContainer.scrollLeft > 8;
-  if (shouldCollapse === forecastLabelsCollapsed) return;
-  forecastLabelsCollapsed = shouldCollapse;
-  applyForecastLabelMode(forecastLabelsCollapsed);
+  const scrolled = forecastScrollContainer.scrollLeft > 8;
+  document.documentElement.classList.toggle('forecast-scrolled', scrolled);
 }
 
 if (forecastScrollContainer) {
-  forecastScrollContainer.addEventListener('scroll', updateForecastLabelModeFromScroll);
+  forecastScrollContainer.addEventListener(
+    'scroll',
+    updateForecastStickyLabelModeFromScroll,
+    {
+      passive: true,
+    },
+  );
+  updateForecastStickyLabelModeFromScroll();
+}
+
+function setUpdatedLabel(target, label, isoTime) {
+  if (!target) return;
+  if (!isoTime) {
+    target.textContent = `${label}: —`;
+    return;
+  }
+  const date = new Date(isoTime);
+  target.textContent = `${label}: ${date.toLocaleString('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })}`;
 }
 
 function setLocation() {
@@ -271,6 +288,7 @@ function buildUrl() {
     longitude: config.longitude,
     timezone: config.timezone,
     wind_speed_unit: config.windSpeedUnit,
+    forecast_days: String(config.forecastDays),
     current: [
       'temperature_2m',
       'precipitation',
@@ -290,24 +308,9 @@ function buildUrl() {
     ].join(','),
   });
 
-  return `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
-}
-
-function setLoadingState() {
-  if (ui.currentSummary) {
-    ui.currentSummary.textContent = 'Refreshing';
-  }
-  ui.lastUpdated.textContent = 'Fetching latest data…';
-}
-
-function setCachedUpdated(timestamp) {
-  if (!timestamp) return;
-  ui.lastUpdated.textContent = `Updated ${new Date(
-    timestamp,
-  ).toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })} (cached)`;
+  const base =
+    config.weather?.apiUrl || 'https://api.open-meteo.com/v1/forecast';
+  return `${base}?${params.toString()}`;
 }
 
 function setTideStatus(message) {
@@ -416,6 +419,7 @@ async function loadTides(options = {}) {
 
   try {
     const response = await fetch(url.toString());
+    const updatedAt = response.headers.get('X-Updated-At');
     if (!response.ok) {
       let details = '';
       try {
@@ -436,11 +440,11 @@ async function loadTides(options = {}) {
     }
     const data = await response.json();
     const items = parseUkhOEvents(data);
-    return items;
+    return { items, updatedAt };
   } catch (error) {
     setTideStatus('Tide feed unavailable.');
     console.error(error);
-    return [];
+    return { items: [], updatedAt: null };
   }
 }
 
@@ -513,6 +517,106 @@ function tideLevelAt(tideEvents, time) {
     height,
     lowerHalf: height <= mid,
   };
+}
+
+function median(values) {
+  const nums = values.filter((v) => Number.isFinite(v)).sort((a, b) => a - b);
+  if (!nums.length) return null;
+  const mid = Math.floor(nums.length / 2);
+  return nums.length % 2 === 0 ? (nums[mid - 1] + nums[mid]) / 2 : nums[mid];
+}
+
+function linearFit(points) {
+  // points: [{x, y}] where x is ms, y is height
+  const clean = points.filter(
+    (p) => Number.isFinite(p.x) && Number.isFinite(p.y),
+  );
+  if (clean.length < 2) return null;
+  const n = clean.length;
+  let sx = 0,
+    sy = 0,
+    sxx = 0,
+    sxy = 0;
+  for (const p of clean) {
+    sx += p.x;
+    sy += p.y;
+    sxx += p.x * p.x;
+    sxy += p.x * p.y;
+  }
+  const denom = n * sxx - sx * sx;
+  if (denom === 0) return null;
+  const slope = (n * sxy - sx * sy) / denom;
+  const intercept = (sy - slope * sx) / n;
+  return { slope, intercept };
+}
+
+function extendTideEvents(tideEvents, horizonEnd) {
+  // Extends HW/LW events to horizonEnd using empirical cadence + height trend.
+  // This is not a full harmonic constituent model, but it is stable enough to
+  // provide a coherent multi-day curve when the upstream feed is limited.
+  const base = tideEvents
+    .filter((e) => e.date instanceof Date && !Number.isNaN(e.date.getTime()))
+    .map((e) => ({ ...e }))
+    .sort((a, b) => a.date - b.date);
+
+  if (base.length < 6) return base;
+  if (!(horizonEnd instanceof Date)) return base;
+  const last = base[base.length - 1];
+  if (last.date >= horizonEnd) return base;
+
+  // Estimate typical interval between consecutive events (HW->LW or LW->HW).
+  const deltas = [];
+  for (let i = 1; i < base.length; i++) {
+    const dt = base[i].date - base[i - 1].date;
+    if (dt > 2 * 60 * 60 * 1000 && dt < 10 * 60 * 60 * 1000) deltas.push(dt);
+  }
+  const step = median(deltas) || 6.21 * 60 * 60 * 1000; // ~6h 12m 36s
+
+  // Fit separate height trends for HW and LW using recent history.
+  const recent = base.slice(-24);
+  const pointsHW = recent
+    .filter((e) => e.type === 'HIGH')
+    .map((e) => ({ x: e.date.getTime(), y: parseHeightNumber(e.height) }));
+  const pointsLW = recent
+    .filter((e) => e.type === 'LOW')
+    .map((e) => ({ x: e.date.getTime(), y: parseHeightNumber(e.height) }));
+  const fitHW = linearFit(pointsHW);
+  const fitLW = linearFit(pointsLW);
+
+  // Fall back to medians if fit is unavailable.
+  const hwMedian = median(pointsHW.map((p) => p.y));
+  const lwMedian = median(pointsLW.map((p) => p.y));
+
+  // Continue alternating event types.
+  let nextType = last.type;
+  let nextTime = new Date(last.date.getTime());
+  while (nextTime < horizonEnd) {
+    nextType = nextType === 'HIGH' ? 'LOW' : 'HIGH';
+    nextTime = new Date(nextTime.getTime() + step);
+
+    const tms = nextTime.getTime();
+    let predictedHeight = null;
+    if (nextType === 'HIGH') {
+      predictedHeight = fitHW ? fitHW.slope * tms + fitHW.intercept : hwMedian;
+    } else {
+      predictedHeight = fitLW ? fitLW.slope * tms + fitLW.intercept : lwMedian;
+    }
+
+    const heightText =
+      predictedHeight === null || !Number.isFinite(predictedHeight)
+        ? null
+        : `${Math.max(predictedHeight, 0).toFixed(2)}m`;
+
+    base.push({
+      type: nextType,
+      height: heightText,
+      timeText: formatTideTime.format(nextTime),
+      date: nextTime,
+      predicted: true,
+    });
+  }
+
+  return base;
 }
 
 function clamp(value, min = 0, max = 1) {
@@ -837,7 +941,7 @@ function renderForecast(data, tideEvents) {
   const dateLabel = document.createElement('th');
   dateLabel.className = 'label-cell';
   dateLabel.dataset.fullLabel = 'Date';
-  dateLabel.dataset.abbrev = 'Day';
+  dateLabel.dataset.abbrev = 'Date';
   dateLabel.textContent = 'Date';
   ui.forecastHeadRow.appendChild(dateLabel);
 
@@ -858,6 +962,19 @@ function renderForecast(data, tideEvents) {
     ui.forecastHeadRow.appendChild(buildHeaderCell(time));
   }
 
+  // Extend upstream tide events to cover at least the visible forecast horizon.
+  const lastColumnTime = columns.length
+    ? columns[columns.length - 1].time
+    : end;
+  const horizonEnd = new Date(
+    lastColumnTime.getTime() + windowSize * 60 * 60 * 1000,
+  );
+  const minimumEnd = new Date(
+    now.getTime() + (config.tide.predictDays || 14) * 24 * 60 * 60 * 1000,
+  );
+  const targetEnd = horizonEnd > minimumEnd ? horizonEnd : minimumEnd;
+  const tideSeries = extendTideEvents(tideEvents, targetEnd);
+
   const rows = [
     { label: 'Time', abbrev: 'Time', key: 'time' },
     { label: 'KI', abbrev: 'KI', key: 'ki' },
@@ -871,7 +988,7 @@ function renderForecast(data, tideEvents) {
     { label: 'Tide curve', abbrev: 'Curve', key: 'tide_curve' },
   ];
 
-  const tideHeights = tideEvents
+  const tideHeights = tideSeries
     .map((event) => parseHeightNumber(event.height))
     .filter((value) => value !== null);
   const tideRange = tideHeights.length
@@ -882,7 +999,7 @@ function renderForecast(data, tideEvents) {
     const windSpeed = data.hourly.wind_speed_10m[column.index];
     const gustSpeed = data.hourly.wind_gusts_10m[column.index];
     const degrees = data.hourly.wind_direction_10m[column.index];
-    const tideLevel = tideLevelAt(tideEvents, column.time);
+    const tideLevel = tideLevelAt(tideSeries, column.time);
     return kiteIndex({
       windSpeed,
       gustSpeed,
@@ -1003,8 +1120,8 @@ function renderForecast(data, tideEvents) {
         const windowEnd = new Date(
           windowStart.getTime() + windowSize * 60 * 60 * 1000,
         );
-        const tideText = tideForWindow(tideEvents, windowStart, windowEnd);
-        const tideLevel = tideLevelAt(tideEvents, windowStart);
+        const tideText = tideForWindow(tideSeries, windowStart, windowEnd);
+        const tideLevel = tideLevelAt(tideSeries, windowStart);
         const heightValue = tideLevel ? tideLevel.height : null;
         const cell = buildDataCell(
           tideText,
@@ -1150,7 +1267,7 @@ function renderForecast(data, tideEvents) {
   const curveRow = ui.forecastBody.querySelector('.tide-curve-cell svg');
   if (curveRow) {
     requestAnimationFrame(() => {
-      renderTideChart(curveRow, tideEvents, columns, headerCells);
+      renderTideChart(curveRow, tideSeries, columns, headerCells);
     });
   }
 
@@ -1166,23 +1283,23 @@ function renderForecast(data, tideEvents) {
       : 'No score boosts.';
   }
 
-  const shouldCollapse =
-    forecastScrollContainer && forecastScrollContainer.scrollLeft > 8;
-  forecastLabelsCollapsed = Boolean(shouldCollapse);
-  applyForecastLabelMode(forecastLabelsCollapsed);
+  // Sticky label width is handled via the 'forecast-scrolled' root class.
 }
 
-function saveCache(weather, tides) {
-  const timestamp = Date.now();
+function saveCache(weather, tides, weatherUpdatedAt, tidesUpdatedAt) {
   localStorage.setItem(cacheKeys.weather, JSON.stringify(weather));
   localStorage.setItem(cacheKeys.tides, JSON.stringify(tides));
-  localStorage.setItem(cacheKeys.updated, String(timestamp));
+  if (weatherUpdatedAt)
+    localStorage.setItem(cacheKeys.weatherUpdatedAt, String(weatherUpdatedAt));
+  if (tidesUpdatedAt)
+    localStorage.setItem(cacheKeys.tidesUpdatedAt, String(tidesUpdatedAt));
 }
 
 function loadCache() {
   const weatherRaw = localStorage.getItem(cacheKeys.weather);
   const tidesRaw = localStorage.getItem(cacheKeys.tides);
-  const updatedRaw = localStorage.getItem(cacheKeys.updated);
+  const weatherUpdatedAt = localStorage.getItem(cacheKeys.weatherUpdatedAt);
+  const tidesUpdatedAt = localStorage.getItem(cacheKeys.tidesUpdatedAt);
   if (!weatherRaw) return null;
   try {
     const weather = JSON.parse(weatherRaw);
@@ -1195,7 +1312,8 @@ function loadCache() {
     return {
       weather,
       tides,
-      updated: updatedRaw ? Number(updatedRaw) : null,
+      weatherUpdatedAt: weatherUpdatedAt || null,
+      tidesUpdatedAt: tidesUpdatedAt || null,
     };
   } catch (error) {
     console.error(error);
@@ -1206,21 +1324,30 @@ function loadCache() {
 function renderFromCache() {
   const cached = loadCache();
   if (!cached) {
-    ui.lastUpdated.textContent = 'No cached data yet. Loading from network…';
     return false;
   }
 
   renderCurrent(cached.weather);
   renderForecast(cached.weather, cached.tides);
   setTideStatus('');
-  setCachedUpdated(cached.updated);
+  setUpdatedLabel(
+    ui.weatherUpdated,
+    'Weather updated',
+    cached.weatherUpdatedAt,
+  );
+  setUpdatedLabel(ui.tidesUpdated, 'Tides updated', cached.tidesUpdatedAt);
 
   if (!cached.tides || !cached.tides.length) {
     loadTides({ force: false })
-      .then((tides) => {
-        if (!tides.length) return;
-        renderForecast(cached.weather, tides);
-        saveCache(cached.weather, tides);
+      .then((res) => {
+        if (!res?.items || !res.items.length) return;
+        renderForecast(cached.weather, res.items);
+        saveCache(
+          cached.weather,
+          res.items,
+          cached.weatherUpdatedAt,
+          res.updatedAt,
+        );
       })
       .catch((error) => {
         console.error(error);
@@ -1230,44 +1357,39 @@ function renderFromCache() {
   return true;
 }
 
-function setLastUpdated() {
-  ui.lastUpdated.textContent = `Updated ${new Date().toLocaleTimeString(
-    'en-GB',
-    {
-      hour: '2-digit',
-      minute: '2-digit',
-    },
-  )}`;
-}
-
 function handleError(error) {
   if (ui.currentSummary) {
     ui.currentSummary.textContent = 'Offline';
   }
-  ui.lastUpdated.textContent = 'Could not refresh data';
+  setUpdatedLabel(ui.weatherUpdated, 'Weather updated', null);
+  setUpdatedLabel(ui.tidesUpdated, 'Tides updated', null);
   console.error(error);
 }
 
 async function loadForecast(options = {}) {
   const force = options.force === true;
 
-  setLoadingState();
   setLocation();
 
   try {
-    const [weatherResponse, tideEvents] = await Promise.all([
+    const [weatherResponse, tideRes] = await Promise.all([
       fetch(buildUrl()),
       loadTides({ force }),
     ]);
     if (!weatherResponse.ok) {
-      throw new Error(`Open-Meteo error: ${weatherResponse.status}`);
+      throw new Error(`Weather proxy error: ${weatherResponse.status}`);
     }
+    const weatherUpdatedAt = weatherResponse.headers.get('X-Updated-At');
     const data = await weatherResponse.json();
+    const tideItems = tideRes?.items || [];
+    const tidesUpdatedAt = tideRes?.updatedAt || null;
+
     renderCurrent(data);
-    renderForecast(data, tideEvents);
+    renderForecast(data, tideItems);
     setTideStatus('');
-    setLastUpdated();
-    saveCache(data, tideEvents);
+    setUpdatedLabel(ui.weatherUpdated, 'Weather updated', weatherUpdatedAt);
+    setUpdatedLabel(ui.tidesUpdated, 'Tides updated', tidesUpdatedAt);
+    saveCache(data, tideItems, weatherUpdatedAt, tidesUpdatedAt);
   } catch (error) {
     handleError(error);
   }
