@@ -127,10 +127,10 @@ if ($ttlSeconds > 0 && $cached['ts'] > 0) {
 
 $coverageOk = ($cached['days'] >= $minDaysRequired);
 
-$canServeCache = (!$forceRefresh && $cached['payload_string'] !== null && $coverageOk && $ttlOk);
+$canServeCache = (!$forceRefresh && $cached['payload_string'] !== null && $ttlOk);
 
 if ($canServeCache) {
-    header('X-Cache: HIT');
+    header('X-Cache: ' . ($coverageOk ? 'HIT' : 'HIT-PARTIAL'));
     header('X-Coverage-Days: ' . $cached['days']);
     if ($cached['ts'] > 0) {
         header('X-Updated-At: ' . gmdate('c', $cached['ts']));
