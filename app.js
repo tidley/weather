@@ -35,6 +35,7 @@ const ui = {
   currentGusts: document.getElementById('current-gusts'),
   currentPrecip: document.getElementById('current-precip'),
   currentCloud: document.getElementById('current-cloud'),
+  currentCloudIcon: document.getElementById('current-cloud-icon'),
   currentScore: document.getElementById('current-score'),
   forecastGrid: document.getElementById('forecast-grid'),
   forecastHeadRow: document.getElementById('forecast-head-row'),
@@ -123,7 +124,8 @@ function tooltipTextForCell(cell) {
   const titleText = cell.getAttribute('title');
   if (titleText) return titleText;
   if (cell.classList.contains('label-cell')) {
-    return cell.dataset.fullLabel || cell.textContent || '';
+    const raw = cell.dataset.fullLabel || cell.textContent || '';
+    return raw.replace(/\.\s*$/, '');
   }
   return '';
 }
@@ -406,9 +408,7 @@ function renderCurrent(data) {
   const current = data.current;
   ui.currentTemp.textContent = formatValue(current.temperature_2m, '°C');
   ui.currentWind.textContent = formatValue(current.wind_speed_10m, ' kt');
-  ui.currentWindDir.textContent = `${windCompass(
-    current.wind_direction_10m,
-  )} wind`;
+  ui.currentWindDir.textContent = `${windCompass(current.wind_direction_10m)}`;
   if (ui.currentWindArrow) {
     ui.currentWindArrow.style.transform = arrowForDegrees(
       current.wind_direction_10m,
@@ -417,6 +417,15 @@ function renderCurrent(data) {
   ui.currentGusts.textContent = formatValue(current.wind_gusts_10m, ' kt');
   ui.currentPrecip.textContent = formatValue(current.precipitation, ' mm');
   ui.currentCloud.textContent = formatValue(current.cloud_cover, '% cloud');
+  if (ui.currentCloudIcon) {
+    const currentTime = current.time ? new Date(current.time) : new Date();
+    const icon = skyIcon(current.cloud_cover, currentTime);
+    ui.currentCloudIcon.textContent = icon;
+    ui.currentCloudIcon.classList.toggle(
+      'weather-icon-double',
+      icon.includes('☁️') && icon.includes('🌙'),
+    );
+  }
 
   const wind = Math.round(current.wind_speed_10m);
   const gusts = Math.round(current.wind_gusts_10m);
@@ -762,6 +771,7 @@ function kiteIndex({
     const target = 0.2;
     st = clamp(1 - Math.abs(tNorm - target) / 0.5);
   }
+  st = Math.max(0.3, st);
   reasons.push(`S_t tide: ${st.toFixed(2)} (prefers low)`);
 
   const sl = isDaylightNow ? 1.0 : 0.0;
