@@ -6,13 +6,26 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
-$TTL_SECONDS = 3600; // 1 hour
+$TTL_SECONDS = 7200; // 2 hours
 $CACHE_FILE = __DIR__ . '/weather-cache.json';
 
 function send_json($payload, $status = 200) {
   http_response_code($status);
   echo $payload;
   exit;
+}
+
+function send_payload($payload, $status = 200) {
+  http_response_code($status);
+  echo $payload;
+  exit;
+}
+
+function set_cache_headers($ttlSeconds, $fetchedAt = null) {
+  header('Cache-Control: public, max-age=' . $ttlSeconds . ', stale-while-revalidate=60');
+  if ($fetchedAt) {
+    header('Last-Modified: ' . gmdate('D, d M Y H:i:s', intval($fetchedAt)) . ' GMT');
+  }
 }
 
 function cache_read($path) {
@@ -86,9 +99,25 @@ if (
   $cache_age >= 0 &&
   $cache_age < $TTL_SECONDS
 ) {
+  $fetchedAt = intval($cache['fetched_at']);
+  if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
+    $since = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']);
+    if ($since !== false && $since >= $fetchedAt) {
+      header('X-Cache: HIT');
+      header('X-Cache-Age-Seconds: ' . $cache_age);
+      header('X-Updated-At: ' . gmdate('c', $fetchedAt));
+      set_cache_headers($TTL_SECONDS, $fetchedAt);
+      http_response_code(304);
+      exit;
+    }
+  }
   header('X-Cache: HIT');
   header('X-Cache-Age-Seconds: ' . $cache_age);
-  header('X-Updated-At: ' . gmdate('c', intval($cache['fetched_at'])));
+  header('X-Updated-At: ' . gmdate('c', $fetchedAt));
+  set_cache_headers($TTL_SECONDS, $fetchedAt);
+  if (isset($cache['payload']) && is_string($cache['payload'])) {
+    send_payload($cache['payload']);
+  }
   send_json(json_encode($cache['data'], JSON_UNESCAPED_SLASHES));
 }
 
@@ -108,6 +137,10 @@ if ($response === false) {
     header('X-Cache: STALE');
     if ($cache_age !== null) header('X-Cache-Age-Seconds: ' . $cache_age);
     if (isset($cache['fetched_at'])) header('X-Updated-At: ' . gmdate('c', intval($cache['fetched_at'])));
+    set_cache_headers($TTL_SECONDS, isset($cache['fetched_at']) ? intval($cache['fetched_at']) : null);
+    if (isset($cache['payload']) && is_string($cache['payload'])) {
+      send_payload($cache['payload'], 200);
+    }
     send_json(json_encode($cache['data'], JSON_UNESCAPED_SLASHES), 200);
   }
   header('X-Cache: MISS');
@@ -124,8 +157,10 @@ cache_write($CACHE_FILE, [
   'fetched_at' => time(),
   'upstream_url' => $url,
   'data' => $decoded,
+  'payload' => $response,
 ]);
 
 header('X-Cache: MISS');
 header('X-Updated-At: ' . gmdate('c', time()));
+set_cache_headers($TTL_SECONDS, time());
 send_json($response, 200);
