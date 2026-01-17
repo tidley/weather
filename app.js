@@ -31,6 +31,7 @@ const ui = {
   currentTemp: document.getElementById('current-temp'),
   currentWind: document.getElementById('current-wind'),
   currentWindDir: document.getElementById('current-wind-dir'),
+  currentWindArrow: document.getElementById('current-wind-arrow'),
   currentGusts: document.getElementById('current-gusts'),
   currentPrecip: document.getElementById('current-precip'),
   currentCloud: document.getElementById('current-cloud'),
@@ -78,6 +79,54 @@ const formatTideTime = new Intl.DateTimeFormat('en-GB', {
 
 const CACHE_STALE_MS = 24 * 60 * 60 * 1000;
 const forecastScrollContainer = document.querySelector('.forecast-scroll');
+let tapTooltip;
+let tapTooltipTarget;
+let tapTooltipVisible = false;
+
+function shouldEnableTapTooltips() {
+  return window.matchMedia && window.matchMedia('(hover: none)').matches;
+}
+
+function hideTapTooltip() {
+  if (!tapTooltip || !tapTooltipVisible) return;
+  tapTooltip.classList.remove('visible');
+  tapTooltipVisible = false;
+  tapTooltipTarget = null;
+}
+
+function showTapTooltip(target, text) {
+  if (!tapTooltip) return;
+  tapTooltip.textContent = text;
+  tapTooltip.classList.add('visible');
+  tapTooltipVisible = true;
+  tapTooltipTarget = target;
+
+  const rect = target.getBoundingClientRect();
+  const scrollX = window.scrollX || window.pageXOffset || 0;
+  const scrollY = window.scrollY || window.pageYOffset || 0;
+  const tooltipRect = tapTooltip.getBoundingClientRect();
+  const margin = 8;
+  let top = rect.top + scrollY - tooltipRect.height - margin;
+  if (top < scrollY + margin) {
+    top = rect.bottom + scrollY + margin;
+  }
+  let left = rect.left + scrollX + rect.width / 2 - tooltipRect.width / 2;
+  const minLeft = scrollX + margin;
+  const maxLeft = scrollX + window.innerWidth - tooltipRect.width - margin;
+  left = Math.max(minLeft, Math.min(maxLeft, left));
+  tapTooltip.style.top = `${Math.round(top)}px`;
+  tapTooltip.style.left = `${Math.round(left)}px`;
+}
+
+function tooltipTextForCell(cell) {
+  if (!cell) return '';
+  const titleText = cell.getAttribute('title');
+  if (titleText) return titleText;
+  if (cell.classList.contains('label-cell')) {
+    return cell.dataset.fullLabel || cell.textContent || '';
+  }
+  return '';
+}
 function updateForecastStickyLabelModeFromScroll() {
   if (!forecastScrollContainer) return;
   const scrolled = forecastScrollContainer.scrollLeft > 8;
@@ -93,6 +142,34 @@ if (forecastScrollContainer) {
     },
   );
   updateForecastStickyLabelModeFromScroll();
+}
+
+if (shouldEnableTapTooltips()) {
+  tapTooltip = document.createElement('div');
+  tapTooltip.className = 'tap-tooltip';
+  tapTooltip.setAttribute('role', 'tooltip');
+  tapTooltip.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(tapTooltip);
+
+  document.addEventListener('click', (event) => {
+    const target = event.target.closest(
+      '.forecast-grid .label-cell, .forecast-grid .data-cell',
+    );
+    if (!target) {
+      hideTapTooltip();
+      return;
+    }
+    const text = tooltipTextForCell(target);
+    if (!text) return;
+    if (tapTooltipTarget === target && tapTooltipVisible) {
+      hideTapTooltip();
+      return;
+    }
+    showTapTooltip(target, text);
+  });
+
+  window.addEventListener('scroll', hideTapTooltip, true);
+  window.addEventListener('resize', hideTapTooltip);
 }
 
 function setUpdatedLabel(target, label, isoTime) {
@@ -332,6 +409,11 @@ function renderCurrent(data) {
   ui.currentWindDir.textContent = `${windCompass(
     current.wind_direction_10m,
   )} wind`;
+  if (ui.currentWindArrow) {
+    ui.currentWindArrow.style.transform = arrowForDegrees(
+      current.wind_direction_10m,
+    );
+  }
   ui.currentGusts.textContent = formatValue(current.wind_gusts_10m, ' kt');
   ui.currentPrecip.textContent = formatValue(current.precipitation, ' mm');
   ui.currentCloud.textContent = formatValue(current.cloud_cover, '% cloud');
@@ -677,9 +759,10 @@ function kiteIndex({
     const tNorm = clamp(
       (tideLevel.height - tideRange.min) / (tideRange.max - tideRange.min),
     );
-    st = clamp(1 - Math.abs(tNorm - 0.6) / 0.6);
+    const target = 0.2;
+    st = clamp(1 - Math.abs(tNorm - target) / 0.5);
   }
-  reasons.push(`S_t tide: ${st.toFixed(2)} (prefers mid-high)`);
+  reasons.push(`S_t tide: ${st.toFixed(2)} (prefers low)`);
 
   const sl = isDaylightNow ? 1.0 : 0.0;
   reasons.push(
@@ -807,8 +890,8 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
 
   const svgRect = svg.getBoundingClientRect();
   const svgWidth = Math.max(svgRect.width, 300);
-  const svgHeight = 120;
-  const padding = 16;
+  const svgHeight = 80;
+  const padding = 10;
   svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
   svg.setAttribute('preserveAspectRatio', 'none');
 
@@ -923,7 +1006,7 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
     );
     circle.setAttribute('cx', cx);
     circle.setAttribute('cy', cy);
-    circle.setAttribute('r', '4');
+    circle.setAttribute('r', '3');
     circle.setAttribute('class', 'tide-marker');
     svg.appendChild(circle);
 
@@ -936,7 +1019,7 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
         'text',
       );
       label.setAttribute('x', cx);
-      label.setAttribute('y', cy - 10);
+      label.setAttribute('y', Math.max(cy - 6, padding - 2));
       label.setAttribute('text-anchor', 'middle');
       label.setAttribute('class', 'tide-label');
       label.textContent = `${event.timeText} · ${event.height}`;
