@@ -227,6 +227,22 @@ function arrowForDegrees(degrees) {
   return `rotate(${(degrees + 90) % 360}deg)`;
 }
 
+function createMeteoconsIcon(name, extraClass) {
+  const icon = document.createElement('span');
+  icon.className = `iconify meteocons-icon${extraClass ? ` ${extraClass}` : ''}`;
+  icon.dataset.icon = `meteocons:${name}`;
+  icon.setAttribute('aria-hidden', 'true');
+  return icon;
+}
+
+function setMeteoconsIcon(el, name, extraClass) {
+  if (!el) return;
+  el.classList.add('iconify', 'meteocons-icon');
+  if (extraClass) el.classList.add(extraClass);
+  el.dataset.icon = `meteocons:${name}`;
+  el.setAttribute('aria-hidden', 'true');
+}
+
 function colorForValue(value, stops) {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return 'transparent';
@@ -339,15 +355,21 @@ function skyIcon(cloudCover, time) {
     cloudCover === undefined ||
     Number.isNaN(cloudCover)
   ) {
-    return '—';
+    return 'not-available-fill';
   }
   const hour = time ? time.getHours() : 12;
   const isNight = hour < 6 || hour >= 20;
 
-  if (cloudCover < 20) return isNight ? '🌕' : '☀️';
-  if (cloudCover < 50) return isNight ? '🌙' : '⛅';
-  if (cloudCover < 80) return isNight ? '☁️🌙' : '🌥️';
-  return '☁️';
+  if (cloudCover < 20) {
+    return isNight ? 'clear-night-fill' : 'clear-day-fill';
+  }
+  if (cloudCover < 50) {
+    return isNight ? 'partly-cloudy-night-fill' : 'partly-cloudy-day-fill';
+  }
+  if (cloudCover < 80) {
+    return isNight ? 'partly-cloudy-night-fill' : 'cloudy-fill';
+  }
+  return 'cloudy-fill';
 }
 
 function lunarPhaseInfo(date) {
@@ -357,7 +379,16 @@ function lunarPhaseInfo(date) {
   const phase = ((daysSince % synodicMonth) + synodicMonth) % synodicMonth;
   const fraction = phase / synodicMonth;
   const index = Math.floor(fraction * 8) % 8;
-  const icons = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
+  const icons = [
+    'moon-new-fill',
+    'moon-waxing-crescent-fill',
+    'moon-first-quarter-fill',
+    'moon-waxing-gibbous-fill',
+    'moon-full-fill',
+    'moon-waning-gibbous-fill',
+    'moon-last-quarter-fill',
+    'moon-waning-crescent-fill',
+  ];
   const illumination = (1 - Math.cos(2 * Math.PI * fraction)) / 2;
   return { icon: icons[index], illumination };
 }
@@ -420,11 +451,9 @@ function renderCurrent(data) {
   if (ui.currentCloudIcon) {
     const currentTime = current.time ? new Date(current.time) : new Date();
     const icon = skyIcon(current.cloud_cover, currentTime);
-    ui.currentCloudIcon.textContent = icon;
-    ui.currentCloudIcon.classList.toggle(
-      'weather-icon-double',
-      icon.includes('☁️') && icon.includes('🌙'),
-    );
+    setMeteoconsIcon(ui.currentCloudIcon, icon);
+    ui.currentCloudIcon.style.color =
+      current.cloud_cover < 20 ? '#ffd54a' : '#dbe7ff';
   }
 
   const wind = Math.round(current.wind_speed_10m);
@@ -1278,7 +1307,7 @@ function renderForecast(data, tideEvents) {
         const cloud = data.hourly.cloud_cover[column.index];
         const icon = skyIcon(cloud, column.time);
         const cell = buildDataCell(
-          icon,
+          '',
           `${Math.round(cloud)}%`,
           colorForValue(cloud, [
             { value: 0, color: '#1e4e9c' },
@@ -1290,10 +1319,8 @@ function renderForecast(data, tideEvents) {
         cell.classList.add('sky-cell');
         const main = cell.querySelector('.cell-main');
         if (main) {
-          main.classList.add('weather-icon');
-          if (icon.includes('☁️') && icon.includes('🌙')) {
-            main.classList.add('weather-icon-double');
-          }
+          main.textContent = '';
+          main.appendChild(createMeteoconsIcon(icon));
           main.style.color = cloud < 20 ? '#ffd54a' : 'var(--ink)';
         }
         applyColumnWash(cell, columnScores[colIndex].stars);
@@ -1304,14 +1331,16 @@ function renderForecast(data, tideEvents) {
       if (row.key === 'moon') {
         const { icon, illumination } = lunarPhaseInfo(column.time);
         const cell = buildDataCell(
-          icon,
+          '',
           `${Math.round(illumination * 100)}%`,
           timeGradient(column.time),
         );
         cell.classList.add('moon-cell');
         const main = cell.querySelector('.cell-main');
         if (main) {
-          main.classList.add('weather-icon');
+          main.textContent = '';
+          main.appendChild(createMeteoconsIcon(icon));
+          main.style.color = '#ffdca8';
         }
         applyColumnWash(cell, columnScores[colIndex].stars);
         tr.appendChild(cell);
