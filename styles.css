@@ -243,7 +243,7 @@ h2 {
 
 .forecast-grid th,
 .forecast-grid td {
-  padding: 7px 6px;
+  padding: 7px 3px;
   border-bottom: 1px solid rgba(231, 242, 255, 0.08);
   text-align: center;
   white-space: nowrap;
@@ -378,6 +378,16 @@ h2 {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
+.weather-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.weather-icon-double {
+  font-size: 0.8rem;
+  letter-spacing: -0.06em;
+}
+
 .gf-value {
   font-size: 0.85rem;
   color: #dfeaff;
@@ -399,8 +409,8 @@ h2 {
 }
 
 .wind-direction-cell .cell-main {
-  font-size: 0.78rem;
-  letter-spacing: 0.3px;
+  font-size: 0.7rem;
+  letter-spacing: 0.2px;
 }
 
 .score-0 .cell-main {
@@ -485,7 +495,7 @@ h2 {
 
 .arrow {
   display: inline-block;
-  width: 16px;
+  width: 18px;
   height: 2px;
   background: var(--accent);
   border-radius: 999px;
@@ -498,9 +508,9 @@ h2 {
 .arrow::after {
   content: "";
   position: absolute;
-  right: -5px;
-  top: -5px;
-  border: 5px solid transparent;
+  right: -6px;
+  top: -6px;
+  border: 6px solid transparent;
   border-left-color: var(--accent);
 }
 
@@ -590,7 +600,7 @@ h2 {
 
   .forecast-grid th,
   .forecast-grid td {
-    padding: 4px 4px;
+    padding: 4px 2px;
   }
 
   .forecast-grid {
@@ -615,12 +625,21 @@ h2 {
     font-size: 0.9rem;
   }
 
+  .weather-icon {
+    font-size: 0.85rem;
+  }
+
+  .weather-icon-double {
+    font-size: 0.72rem;
+  }
+
   .arrow {
-    width: 14px;
+    width: 15px;
   }
 
   .arrow::after {
     right: -5px;
     border-width: 5px;
+    top: -5px;
   }
 }
