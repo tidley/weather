@@ -230,12 +230,12 @@ h2 {
 .forecast-grid {
   border-collapse: collapse;
   width: max-content;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .forecast-grid th,
 .forecast-grid td {
-  padding: 6px 8px;
+  padding: 7px 6px;
   border-bottom: 1px solid rgba(231, 242, 255, 0.08);
   text-align: center;
   white-space: nowrap;
@@ -248,7 +248,7 @@ h2 {
 }
 
 .forecast-grid thead .cell-main {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .forecast-grid thead .cell-sub {
@@ -263,11 +263,11 @@ h2 {
   color: var(--muted);
   font-weight: 600;
   z-index: 2;
-  min-width: 120px;
+  min-width: 104px;
 }
 
 .data-cell {
-  min-width: 62px;
+  min-width: 54px;
   border-left: 1px solid rgba(231, 242, 255, 0.04);
 }
 
@@ -362,7 +362,7 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .wind-cell .arrow {
@@ -371,6 +371,11 @@ h2 {
 
 .wind-cell .cell-main {
   color: #f3f7ff;
+}
+
+.wind-direction-cell .cell-main {
+  font-size: 0.78rem;
+  letter-spacing: 0.3px;
 }
 
 .score-0 .cell-main {
@@ -455,7 +460,7 @@ h2 {
 
 .arrow {
   display: inline-block;
-  width: 18px;
+  width: 16px;
   height: 2px;
   background: var(--accent);
   border-radius: 999px;
@@ -468,9 +473,9 @@ h2 {
 .arrow::after {
   content: "";
   position: absolute;
-  right: -6px;
+  right: -5px;
   top: -5px;
-  border: 6px solid transparent;
+  border: 5px solid transparent;
   border-left-color: var(--accent);
 }
 
@@ -541,12 +546,12 @@ h2 {
   }
 
   .label-cell {
-    min-width: 64px;
+    min-width: 58px;
     font-size: 0.65rem;
   }
 
   .data-cell {
-    min-width: 52px;
+    min-width: 48px;
   }
 
   .forecast-grid th,

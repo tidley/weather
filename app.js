@@ -67,6 +67,7 @@ const formatTideTime = new Intl.DateTimeFormat('en-GB', {
   minute: '2-digit',
 });
 
+const CACHE_STALE_MS = 24 * 60 * 60 * 1000;
 const forecastScrollContainer = document.querySelector('.forecast-scroll');
 let forecastLabelsCollapsed = false;
 
@@ -652,7 +653,7 @@ function applyColumnWash(cell, stars) {
 
 function buildDirectionCell(direction, degrees) {
   const cell = document.createElement('td');
-  cell.className = 'data-cell';
+  cell.className = 'data-cell wind-direction-cell';
   const wrapper = document.createElement('div');
   wrapper.className = 'wind-cell';
   const arrow = document.createElement('span');
@@ -1207,7 +1208,7 @@ function renderFromCache() {
   const cached = loadCache();
   if (!cached) {
     ui.lastUpdated.textContent = 'No cached data yet. Loading from network…';
-    return false;
+    return null;
   }
 
   renderCurrent(cached.weather);
@@ -1227,7 +1228,7 @@ function renderFromCache() {
       });
   }
 
-  return true;
+  return cached;
 }
 
 function setLastUpdated() {
@@ -1280,7 +1281,11 @@ if (ui.refresh) {
 }
 
 setLocation();
-const hasCache = renderFromCache();
-if (!hasCache) {
+const cacheResult = renderFromCache();
+const cacheFresh =
+  cacheResult &&
+  cacheResult.updated &&
+  Date.now() - cacheResult.updated < CACHE_STALE_MS;
+if (!cacheFresh) {
   loadForecast({ force: false });
 }
