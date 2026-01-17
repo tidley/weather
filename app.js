@@ -80,6 +80,7 @@ const formatTideTime = new Intl.DateTimeFormat('en-GB', {
 
 const CACHE_STALE_MS = 24 * 60 * 60 * 1000;
 const forecastScrollContainer = document.querySelector('.forecast-scroll');
+const meteoconsCache = new Map();
 let tapTooltip;
 let tapTooltipTarget;
 let tapTooltipVisible = false;
@@ -145,6 +146,12 @@ if (forecastScrollContainer) {
   );
   updateForecastStickyLabelModeFromScroll();
 }
+
+document
+  .querySelectorAll('.meteocons-icon[data-meteocons]')
+  .forEach((icon) => {
+    renderMeteoconsIcon(icon, icon.dataset.meteocons);
+  });
 
 if (shouldEnableTapTooltips()) {
   tapTooltip = document.createElement('div');
@@ -227,20 +234,34 @@ function arrowForDegrees(degrees) {
   return `rotate(${(degrees + 90) % 360}deg)`;
 }
 
-function createMeteoconsIcon(name, extraClass) {
-  const icon = document.createElement('span');
-  icon.className = `iconify meteocons-icon${extraClass ? ` ${extraClass}` : ''}`;
-  icon.dataset.icon = `meteocons:${name}`;
-  icon.setAttribute('aria-hidden', 'true');
-  return icon;
+function fetchMeteoconsSvg(name) {
+  if (!meteoconsCache.has(name)) {
+    const url = `https://api.iconify.design/meteocons:${name}.svg?color=currentColor&width=1em&height=1em`;
+    const promise = fetch(url)
+      .then((response) => (response.ok ? response.text() : ''))
+      .catch(() => '');
+    meteoconsCache.set(name, promise);
+  }
+  return meteoconsCache.get(name);
 }
 
-function setMeteoconsIcon(el, name, extraClass) {
-  if (!el) return;
-  el.classList.add('iconify', 'meteocons-icon');
-  if (extraClass) el.classList.add(extraClass);
-  el.dataset.icon = `meteocons:${name}`;
-  el.setAttribute('aria-hidden', 'true');
+function renderMeteoconsIcon(el, name) {
+  if (!el || !name) return;
+  if (el.dataset.meteocons === name && el.firstChild) return;
+  el.dataset.meteocons = name;
+  el.classList.add('meteocons-icon');
+  fetchMeteoconsSvg(name).then((svg) => {
+    if (!svg || el.dataset.meteocons !== name) return;
+    el.innerHTML = svg;
+  });
+}
+
+function createMeteoconsIcon(name, extraClass) {
+  const icon = document.createElement('span');
+  icon.className = `meteocons-icon${extraClass ? ` ${extraClass}` : ''}`;
+  icon.setAttribute('aria-hidden', 'true');
+  renderMeteoconsIcon(icon, name);
+  return icon;
 }
 
 function colorForValue(value, stops) {
@@ -451,7 +472,7 @@ function renderCurrent(data) {
   if (ui.currentCloudIcon) {
     const currentTime = current.time ? new Date(current.time) : new Date();
     const icon = skyIcon(current.cloud_cover, currentTime);
-    setMeteoconsIcon(ui.currentCloudIcon, icon);
+    renderMeteoconsIcon(ui.currentCloudIcon, icon);
     ui.currentCloudIcon.style.color =
       current.cloud_cover < 20 ? '#ffd54a' : '#dbe7ff';
   }
