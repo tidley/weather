@@ -1168,19 +1168,19 @@ function renderForecast(data, tideEvents) {
     label.dataset.abbrev = row.abbrev || row.label;
     label.textContent = row.label;
     if (row.key === 'precipitation') {
-      label.title = 'Precipitation probability (%) and amount.';
+      label.title = 'Precipitation probability (%) and amount';
     }
     if (row.key === 'sky') {
-      label.title = 'Cloud cover (%).';
+      label.title = 'Cloud cover (%)';
     }
     if (row.key === 'moon') {
-      label.title = 'Moon illumination (%).';
+      label.title = 'Moon illumination (%)';
     }
     if (row.key === 'wind_power') {
-      label.title = `Mean wind → gusts (kt).\nGF = gust / wind.`;
+      label.title = `Mean wind → gusts (kt).\nGF = gust / wind`;
     }
     if (row.key === 'ki') {
-      label.title = 'Kiteability Index (0-1) mapped to stars.';
+      label.title = 'Kiteability Index (0-1) mapped to stars';
     }
     tr.appendChild(label);
 
