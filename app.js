@@ -774,7 +774,9 @@ function kiteIndex({
   const windValue = Number.isFinite(windSpeed) ? windSpeed : 0;
   const sw =
     windValue <= 18
-      ? clamp((windValue - 12) / (18 - 12))
+      ? windValue < 8
+        ? 0
+        : 0.1 + (0.9 * clamp(windValue - 8, 0, 10)) / 10
       : clamp(1 - (windValue - 18) / (25 - 18));
   reasons.push(
     `S_w wind speed: ${sw.toFixed(2)} (wind ${Math.round(windValue)} kt)`,
@@ -786,6 +788,7 @@ function kiteIndex({
     if (gustFactor <= 1.3) sg = 1;
     else if (gustFactor >= 1.6) sg = 0;
     else sg = 1 - (gustFactor - 1.3) / (1.6 - 1.3);
+    sg = Math.max(0.3, sg);
   }
   reasons.push(
     gustFactor !== null
