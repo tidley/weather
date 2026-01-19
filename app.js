@@ -1448,6 +1448,7 @@ function renderForecast(data, tideEvents) {
     { label: 'KI', abbrev: 'KI', key: 'ki' },
     { label: 'Temp (°C)', abbrev: 'Temp', key: 'temperature_2m' },
     { label: 'Wind (kt)', abbrev: 'Wind', key: 'wind_power' },
+    { label: 'Gust factor', abbrev: 'GF', key: 'gust_factor' },
     { label: 'Direction', abbrev: 'Dir', key: 'wind_direction_10m' },
     { label: 'Waves (m)', abbrev: 'Wave', key: 'wave' },
     { label: 'Rain (mm)', abbrev: 'Rain', key: 'precipitation' },
@@ -1529,6 +1530,9 @@ function renderForecast(data, tideEvents) {
     if (row.key === 'wind_power') {
       label.title = `Mean wind → gusts (kt).\nGF = gust / wind`;
     }
+    if (row.key === 'gust_factor') {
+      label.title = 'Gust factor (gust / wind)';
+    }
     if (row.key === 'ki') {
       label.title = 'Kiteability Index (0-1) mapped to stars';
     }
@@ -1556,13 +1560,8 @@ function renderForecast(data, tideEvents) {
       if (row.key === 'wind_power') {
         const speed = data.hourly.wind_speed_10m[column.index];
         const gusts = data.hourly.wind_gusts_10m[column.index];
-        const gustFactor = speed ? gusts / speed : null;
         const score = columnScores[colIndex];
         const swTag = formatScoreTag(score.scores?.sw);
-        const sgTag = formatScoreTag(score.scores?.sg);
-        const gfText = Number.isFinite(gustFactor)
-          ? `GF ${gustFactor.toFixed(2)}`
-          : 'GF n/a';
         const windColor = colorForValue(speed, [
           { value: 0, color: '#0a1a2b' },
           { value: 8, color: '#12314f' },
@@ -1590,11 +1589,32 @@ function renderForecast(data, tideEvents) {
           `linear-gradient(90deg, ${windColor} 0%, ${midColor} 50%, ${gustColor} 100%)`,
         );
         cell.classList.add('wind-power-cell');
-        setCellSubText(cell, `${gfText} ${swTag}`);
-        addCellScoreLine(cell, sgTag);
+        setCellSubText(cell, swTag);
         cell.title = [score.details?.wind, score.details?.gust]
           .filter(Boolean)
           .join('\n');
+        tr.appendChild(cell);
+        return;
+      }
+
+      if (row.key === 'gust_factor') {
+        const speed = data.hourly.wind_speed_10m[column.index];
+        const gusts = data.hourly.wind_gusts_10m[column.index];
+        const gustFactor = speed ? gusts / speed : null;
+        const score = columnScores[colIndex];
+        const sgTag = formatScoreTag(score.scores?.sg);
+        const gfText = Number.isFinite(gustFactor)
+          ? gustFactor.toFixed(2)
+          : '—';
+        const cell = buildDataCell(
+          gfText,
+          sgTag,
+          'rgba(8, 18, 28, 0.5)',
+        );
+        applyColumnWash(cell, columnScores[colIndex].stars);
+        if (score.details?.gust) {
+          cell.title = score.details.gust;
+        }
         tr.appendChild(cell);
         return;
       }
