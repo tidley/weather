@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Space+Grotesk:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap");
 
 :root {
   color-scheme: dark;
@@ -12,6 +12,7 @@
   --card: #0d1c2b;
   --shadow: 0 18px 40px rgba(2, 10, 20, 0.45);
   --radius: 22px;
+  --mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
 }
 
 * {
@@ -431,6 +432,11 @@ h2 {
   gap: 4px;
 }
 
+.wind-direction-cell .wind-cell {
+  flex-direction: column;
+  gap: 2px;
+}
+
 .wind-cell .arrow {
   align-self: center;
 }
@@ -442,6 +448,17 @@ h2 {
 .wind-direction-cell .cell-main {
   font-size: 0.64rem;
   letter-spacing: 0.15px;
+}
+
+.wind-direction-cell .cell-sub {
+  font-size: 0.6rem;
+  color: var(--muted);
+}
+
+.ki-cell .cell-main,
+.ki-cell .cell-sub {
+  font-family: var(--mono);
+  letter-spacing: -0.02em;
 }
 
 .score-0 .cell-main {
