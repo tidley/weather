@@ -988,12 +988,15 @@ function buildHeaderCell(time) {
   const wrapper = document.createElement('div');
   wrapper.className = 'cell-stack';
   const day = document.createElement('span');
-  day.className = 'cell-main';
+  day.className = 'cell-line';
   day.textContent = formatHeaderDay.format(time);
+  const date = document.createElement('span');
+  date.className = 'cell-line';
+  date.textContent = formatHeaderDate.format(time);
   const hour = document.createElement('span');
-  hour.className = 'cell-sub';
-  hour.textContent = formatHeaderDate.format(time);
-  wrapper.append(day, hour);
+  hour.className = 'cell-line';
+  hour.textContent = `${formatHeaderHour.format(time)}h`;
+  wrapper.append(day, date, hour);
   cell.appendChild(wrapper);
   return cell;
 }
@@ -1146,8 +1149,9 @@ function formatKiTooltip(score, extras = {}) {
   const waveValue = Number.isFinite(wave) ? wave.toFixed(2) : '0.00';
   const waveSigned = Number.isFinite(wave) && wave > 0 ? `+${waveValue}` : waveValue;
 
+  const kiPercent = Math.round(score.ki * 100);
   return (
-    `Kiting Index: ${score.ki.toFixed(2)}  ${starText(score.stars)}\n` +
+    `Kiting Index: ${kiPercent}%  ${starText(score.stars)}\n` +
     `${headline}\n\n` +
     `Main factors:\n` +
     `• ${waveClass.icon} Waves: ${waveSigned} (${waveReason})\n` +
@@ -1443,11 +1447,10 @@ function renderForecast(data, tideEvents) {
   const tideSeries = extendTideEvents(tideEvents, targetEnd);
 
   const rows = [
-    { label: 'Time', abbrev: 'Time', key: 'time' },
     { label: 'KI', abbrev: 'KI', key: 'ki' },
     { label: 'Temp (°C)', abbrev: 'Temp', key: 'temperature_2m' },
-    { label: 'Wind (kt)', abbrev: 'Wind', key: 'wind_power' },
-    { label: 'Gust factor', abbrev: 'GF', key: 'gust_factor' },
+    { label: 'Wind (kt)', abbrev: 'Wind', key: 'wind_speed' },
+    { label: 'Gusts (kt)', abbrev: 'Gusts', key: 'wind_gusts' },
     { label: 'Direction', abbrev: 'Dir', key: 'wind_direction_10m' },
     { label: 'Waves (m)', abbrev: 'Wave', key: 'wave' },
     { label: 'Rain (mm)', abbrev: 'Rain', key: 'precipitation' },
@@ -1526,14 +1529,14 @@ function renderForecast(data, tideEvents) {
     if (row.key === 'moon') {
       label.title = 'Moon illumination (%)';
     }
-    if (row.key === 'wind_power') {
-      label.title = `Mean wind → gusts (kt).\nGF = gust / wind`;
+    if (row.key === 'wind_speed') {
+      label.title = 'Wind speed (kt)';
     }
-    if (row.key === 'gust_factor') {
-      label.title = 'Gust factor (gust / wind)';
+    if (row.key === 'wind_gusts') {
+      label.title = 'Wind gusts (kt)';
     }
     if (row.key === 'ki') {
-      label.title = 'Kiteability Index (0-1) mapped to stars';
+      label.title = 'Kiteability Index (0-100%)';
     }
     if (row.key === 'tide_curve') {
       label.title = 'Dark region indicates predicted tides';
@@ -1556,9 +1559,8 @@ function renderForecast(data, tideEvents) {
     }
 
     columns.forEach((column, colIndex) => {
-      if (row.key === 'wind_power') {
+      if (row.key === 'wind_speed') {
         const speed = data.hourly.wind_speed_10m[column.index];
-        const gusts = data.hourly.wind_gusts_10m[column.index];
         const score = columnScores[colIndex];
         const swTag = formatScoreTag(score.scores?.sw);
         const windColor = colorForValue(speed, [
@@ -1571,6 +1573,24 @@ function renderForecast(data, tideEvents) {
           { value: 28, color: '#c0392b' },
           { value: 32, color: '#7b1d6b' },
         ]);
+        const cell = buildDataCell(
+          `${Math.round(speed)}`,
+          '',
+          windColor,
+        );
+        cell.classList.add('wind-power-cell');
+        setCellSubText(cell, swTag);
+        if (score.details?.wind) {
+          cell.title = score.details.wind;
+        }
+        tr.appendChild(cell);
+        return;
+      }
+
+      if (row.key === 'wind_gusts') {
+        const gusts = data.hourly.wind_gusts_10m[column.index];
+        const score = columnScores[colIndex];
+        const sgTag = formatScoreTag(score.scores?.sg);
         const gustColor = colorForValue(gusts, [
           { value: 0, color: '#0a1a2b' },
           { value: 8, color: '#12314f' },
@@ -1581,36 +1601,12 @@ function renderForecast(data, tideEvents) {
           { value: 28, color: '#c0392b' },
           { value: 32, color: '#7b1d6b' },
         ]);
-        const midColor = lerpColor(windColor, gustColor, 0.5);
         const cell = buildDataCell(
-          `${Math.round(speed)}→${Math.round(gusts)}`,
+          `${Math.round(gusts)}`,
           '',
-          `linear-gradient(90deg, ${windColor} 0%, ${midColor} 50%, ${gustColor} 100%)`,
+          gustColor,
         );
-        cell.classList.add('wind-power-cell');
-        setCellSubText(cell, swTag);
-        cell.title = [score.details?.wind, score.details?.gust]
-          .filter(Boolean)
-          .join('\n');
-        tr.appendChild(cell);
-        return;
-      }
-
-      if (row.key === 'gust_factor') {
-        const speed = data.hourly.wind_speed_10m[column.index];
-        const gusts = data.hourly.wind_gusts_10m[column.index];
-        const gustFactor = speed ? gusts / speed : null;
-        const score = columnScores[colIndex];
-        const sgTag = formatScoreTag(score.scores?.sg);
-        const gfText = Number.isFinite(gustFactor)
-          ? gustFactor.toFixed(2)
-          : '—';
-        const cell = buildDataCell(
-          gfText,
-          sgTag,
-          'rgba(8, 18, 28, 0.5)',
-        );
-        applyColumnWash(cell, columnScores[colIndex].stars);
+        setCellSubText(cell, sgTag);
         if (score.details?.gust) {
           cell.title = score.details.gust;
         }
@@ -1773,23 +1769,12 @@ function renderForecast(data, tideEvents) {
         return;
       }
 
-      if (row.key === 'time') {
-        const score = columnScores[colIndex];
-        const cell = buildTimeCell(column.time);
-        applyColumnWash(cell, columnScores[colIndex].stars);
-        setCellSubText(cell, formatScoreTag(score.scores?.sl));
-        if (score.details?.daylight) {
-          cell.title = score.details.daylight;
-        }
-        tr.appendChild(cell);
-        return;
-      }
-
       if (row.key === 'ki') {
         const { ki, stars } = columnScores[colIndex];
         const starText = stars ? '★'.repeat(stars) : '―';
+        const kiPercent = Math.round(ki * 100);
         const cell = buildDataCell(
-          ki.toFixed(2),
+          `${kiPercent}%`,
           starText,
           colorForValue(ki, [
             { value: 0, color: '#0a1828' },
@@ -1848,12 +1833,22 @@ function renderForecast(data, tideEvents) {
     const now = new Date();
     const nowIndex = columns.findIndex((column) => column.time >= now);
     const columnIndex = nowIndex >= 0 ? nowIndex : 0;
-    const { stars, reasons } = columnScores[columnIndex];
-    ui.currentScore.textContent = stars ? '★'.repeat(stars) : '—';
-    ui.currentScore.style.color = stars ? '#f7c948' : '#9bb2c8';
-    ui.currentScore.title = reasons.length
-      ? reasons.join(' \n')
-      : 'No score boosts.';
+    const score = columnScores[columnIndex];
+    ui.currentScore.textContent = `${Math.round(score.ki * 100)}%`;
+    ui.currentScore.style.color = score.stars ? '#f7c948' : '#9bb2c8';
+    const tideLevel = tideLevelAt(tideSeries, columns[columnIndex].time);
+    ui.currentScore.title = formatKiTooltip(score, {
+      windSpeed: data.hourly.wind_speed_10m[columns[columnIndex].index],
+      windDirDegrees: data.hourly.wind_direction_10m[columns[columnIndex].index],
+      tideHeight: tideLevel?.height ?? null,
+      tideMin: tideRange?.min ?? null,
+      tideMax: tideRange?.max ?? null,
+      isDaylightNow: isDaylight(
+        columns[columnIndex].time,
+        config.latitude,
+        config.longitude,
+      ),
+    });
   }
 
   // Sticky label width is handled via the 'forecast-scrolled' root class.
