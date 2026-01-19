@@ -472,11 +472,6 @@ h2 {
   color: var(--muted);
 }
 
-.ki-score {
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
 .ki-cell .cell-main,
 .ki-cell .cell-sub {
   font-family: var(--mono);
