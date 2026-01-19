@@ -1025,36 +1025,6 @@ function buildDataCell(mainText, subText, background) {
   return cell;
 }
 
-function setCellSubText(cell, text) {
-  const sub = cell.querySelector('.cell-sub');
-  if (sub) {
-    sub.textContent = text;
-    if (text.includes('[')) {
-      sub.classList.add('ki-score');
-    }
-  }
-}
-
-function formatScoreTag(value) {
-  if (!Number.isFinite(value)) return '[—]';
-  return `[${value.toFixed(2)}]`;
-}
-
-function formatDeltaTag(value) {
-  if (!Number.isFinite(value)) return '[—]';
-  return `[${value.toFixed(2)}]`;
-}
-
-function addCellScoreLine(cell, text) {
-  if (!cell || !text) return;
-  const wrapper = cell.querySelector('.cell-stack, .wind-cell');
-  if (!wrapper) return;
-  const line = document.createElement('span');
-  line.className = 'cell-sub ki-score';
-  line.textContent = text;
-  wrapper.appendChild(line);
-}
-
 function starText(stars) {
   return '★'.repeat(stars) + '☆'.repeat(Math.max(0, 5 - stars));
 }
@@ -1451,6 +1421,7 @@ function renderForecast(data, tideEvents) {
     { label: 'Temp (°C)', abbrev: 'Temp', key: 'temperature_2m' },
     { label: 'Wind (kt)', abbrev: 'Wind', key: 'wind_speed' },
     { label: 'Gusts (kt)', abbrev: 'Gusts', key: 'wind_gusts' },
+    { label: 'Gust factor', abbrev: 'GF', key: 'gust_factor' },
     { label: 'Direction', abbrev: 'Dir', key: 'wind_direction_10m' },
     { label: 'Waves (m)', abbrev: 'Wave', key: 'wave' },
     { label: 'Rain (mm)', abbrev: 'Rain', key: 'precipitation' },
@@ -1535,6 +1506,9 @@ function renderForecast(data, tideEvents) {
     if (row.key === 'wind_gusts') {
       label.title = 'Wind gusts (kt)';
     }
+    if (row.key === 'gust_factor') {
+      label.title = 'Gust factor (gust / wind)';
+    }
     if (row.key === 'ki') {
       label.title = 'Kiteability Index (0-100%)';
     }
@@ -1562,7 +1536,6 @@ function renderForecast(data, tideEvents) {
       if (row.key === 'wind_speed') {
         const speed = data.hourly.wind_speed_10m[column.index];
         const score = columnScores[colIndex];
-        const swTag = formatScoreTag(score.scores?.sw);
         const windColor = colorForValue(speed, [
           { value: 0, color: '#0a1a2b' },
           { value: 8, color: '#12314f' },
@@ -1579,7 +1552,6 @@ function renderForecast(data, tideEvents) {
           windColor,
         );
         cell.classList.add('wind-power-cell');
-        setCellSubText(cell, swTag);
         if (score.details?.wind) {
           cell.title = score.details.wind;
         }
@@ -1590,7 +1562,6 @@ function renderForecast(data, tideEvents) {
       if (row.key === 'wind_gusts') {
         const gusts = data.hourly.wind_gusts_10m[column.index];
         const score = columnScores[colIndex];
-        const sgTag = formatScoreTag(score.scores?.sg);
         const gustColor = colorForValue(gusts, [
           { value: 0, color: '#0a1a2b' },
           { value: 8, color: '#12314f' },
@@ -1606,7 +1577,27 @@ function renderForecast(data, tideEvents) {
           '',
           gustColor,
         );
-        setCellSubText(cell, sgTag);
+        if (score.details?.gust) {
+          cell.title = score.details.gust;
+        }
+        tr.appendChild(cell);
+        return;
+      }
+
+      if (row.key === 'gust_factor') {
+        const speed = data.hourly.wind_speed_10m[column.index];
+        const gusts = data.hourly.wind_gusts_10m[column.index];
+        const gustFactor = speed ? gusts / speed : null;
+        const score = columnScores[colIndex];
+        const gfText = Number.isFinite(gustFactor)
+          ? gustFactor.toFixed(2)
+          : '—';
+        const cell = buildDataCell(
+          gfText,
+          '',
+          'rgba(8, 18, 28, 0.5)',
+        );
+        applyColumnWash(cell, columnScores[colIndex].stars);
         if (score.details?.gust) {
           cell.title = score.details.gust;
         }
@@ -1618,8 +1609,7 @@ function renderForecast(data, tideEvents) {
         const degrees = data.hourly.wind_direction_10m[column.index];
         const direction = windCompass(degrees);
         const score = columnScores[colIndex];
-        const sdTag = formatScoreTag(score.scores?.sd);
-        const cell = buildDirectionCell(direction, degrees, sdTag);
+        const cell = buildDirectionCell(direction, degrees);
         cell.style.background = 'rgba(8, 18, 28, 0.5)';
         applyColumnWash(cell, columnScores[colIndex].stars);
         if (score.details?.direction) {
@@ -1639,7 +1629,6 @@ function renderForecast(data, tideEvents) {
         const periodText = Number.isFinite(wavePeriod)
           ? `${Number(wavePeriod).toFixed(1).replace(/\.0$/, '')}s`
           : '';
-        const waveTag = formatDeltaTag(score.scores?.waveBonus);
         const cell = buildDataCell(
           heightText,
           periodText,
@@ -1654,11 +1643,6 @@ function renderForecast(data, tideEvents) {
           ]),
         );
         applyColumnWash(cell, columnScores[colIndex].stars);
-        if (periodText) {
-          addCellScoreLine(cell, waveTag);
-        } else {
-          setCellSubText(cell, waveTag);
-        }
         if (score.details?.waves) {
           cell.title = score.details.waves;
         }
@@ -1673,10 +1657,7 @@ function renderForecast(data, tideEvents) {
         );
         const tideText = tideForWindow(tideSeries, windowStart, windowEnd);
         const score = columnScores[colIndex];
-        const cell = buildDataCell(
-          tideText,
-          formatScoreTag(score.scores?.st),
-        );
+        const cell = buildDataCell(tideText, '');
         applyColumnWash(cell, columnScores[colIndex].stars);
         if (score.details?.tide) {
           cell.title = score.details.tide;
