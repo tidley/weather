@@ -1039,8 +1039,7 @@ function formatScoreTag(value) {
 
 function formatDeltaTag(value) {
   if (!Number.isFinite(value)) return '[—]';
-  const sign = value >= 0 ? '+' : '';
-  return `[${sign}${value.toFixed(2)}]`;
+  return `[${value.toFixed(2)}]`;
 }
 
 function addCellScoreLine(cell, text) {
