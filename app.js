@@ -785,6 +785,38 @@ function clamp(value, min = 0, max = 1) {
   return Math.max(min, Math.min(max, value));
 }
 
+const SHORE_NORMAL_DEG = 180;
+
+function waveDelta({ waveHeight, wavePeriod, windDirDegrees }) {
+  if (!Number.isFinite(waveHeight) || waveHeight < 0.3) {
+    return { delta: 0, tag: 'flat/none' };
+  }
+
+  const H = waveHeight;
+  const P = Number.isFinite(wavePeriod) ? wavePeriod : null;
+
+  const windToShore = Number.isFinite(windDirDegrees)
+    ? Math.cos(((windDirDegrees - SHORE_NORMAL_DEG) * Math.PI) / 180)
+    : 0;
+
+  const heightGood = clamp(1 - Math.abs(H - 0.9) / 0.7);
+  const periodGood = P === null ? 0.5 : clamp((P - 7) / (12 - 7));
+  const windClean = clamp(1 - Math.max(0, windToShore));
+
+  const good = heightGood * periodGood * windClean;
+
+  const tooBig = clamp((H - 1.8) / (2.8 - 1.8));
+  const tooShort = P === null ? 0 : clamp((7 - P) / (7 - 5));
+  const onshore = clamp(Math.max(0, windToShore));
+
+  const bad = clamp(Math.max(tooBig, tooShort) * (0.6 + 0.4 * onshore));
+
+  const quality = clamp(good - bad, -1, 1);
+  const delta = 0.18 * quality;
+
+  return { delta, tag: quality >= 0 ? 'good' : 'bad' };
+}
+
 function kiteIndex({
   windSpeed,
   gustSpeed,
@@ -792,6 +824,8 @@ function kiteIndex({
   tideLevel,
   tideRange,
   isDaylightNow,
+  waveHeight,
+  wavePeriod,
 }) {
   const reasons = [];
 
@@ -852,12 +886,27 @@ function kiteIndex({
     `S_l daylight: ${sl.toFixed(2)} (${isDaylightNow ? 'day' : 'night'})`,
   );
 
-  const ki =
-    Math.pow(sw, 0.33) *
-    Math.pow(sg, 0.27) *
+  const baseKi =
+    Math.pow(sw, 0.35) *
+    Math.pow(sg, 0.3) *
     Math.pow(sd, 0.2) *
     Math.pow(st, 0.1) *
-    Math.pow(sl, 0.1);
+    Math.pow(sl, 0.05);
+
+  const { delta: waveBonus, tag: waveTag } = waveDelta({
+    waveHeight,
+    wavePeriod,
+    windDirDegrees,
+  });
+  const ki = clamp(baseKi + waveBonus);
+
+  reasons.push(
+    waveBonus === 0
+      ? 'Waves: neutral (flat/no data) \u2192 \u0394_wave +0.00'
+      : `Waves: ${waveTag} \u2192 \u0394_wave ${
+          waveBonus >= 0 ? '+' : ''
+        }${waveBonus.toFixed(2)}`,
+  );
 
   let stars = 0;
   if (ki >= 0.8) stars = 5;
@@ -1181,7 +1230,7 @@ function renderForecast(data, tideEvents) {
     { label: 'Temp (°C)', abbrev: 'Temp', key: 'temperature_2m' },
     { label: 'Wind (kt)', abbrev: 'Wind', key: 'wind_power' },
     { label: 'Direction', abbrev: 'Dir', key: 'wind_direction_10m' },
-    { label: 'Wave (m)', abbrev: 'Wave', key: 'wave' },
+    { label: 'Waves (m)', abbrev: 'Wave', key: 'wave' },
     { label: 'Rain (mm)', abbrev: 'Rain', key: 'precipitation' },
     { label: 'Sky', abbrev: 'Sky', key: 'sky' },
     { label: 'Moon', abbrev: 'Moon', key: 'moon' },
@@ -1200,6 +1249,8 @@ function renderForecast(data, tideEvents) {
     const windSpeed = data.hourly.wind_speed_10m[column.index];
     const gustSpeed = data.hourly.wind_gusts_10m[column.index];
     const degrees = data.hourly.wind_direction_10m[column.index];
+    const waveHeight = data.hourly.wave_height?.[column.index];
+    const wavePeriod = data.hourly.wave_period?.[column.index];
     const tideLevel = tideLevelAt(tideSeries, column.time);
     return kiteIndex({
       windSpeed,
@@ -1208,6 +1259,8 @@ function renderForecast(data, tideEvents) {
       tideLevel,
       tideRange,
       isDaylightNow: isDaylight(column.time, config.latitude, config.longitude),
+      waveHeight,
+      wavePeriod,
     });
   });
 
@@ -1223,7 +1276,7 @@ function renderForecast(data, tideEvents) {
         `KI ${columnScores[index].ki.toFixed(2)} · ${'★'.repeat(
           columnScores[index].stars,
         )}\n` +
-        'Formula: (S_w^0.33 × S_g^0.27 × S_d^0.20 × S_t^0.10 × S_l^0.10)\n' +
+        'Formula: (S_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05) + Δ_wave\n' +
         `Scores:\n${columnScores[index].reasons.join('\n')}`;
     }
   });
@@ -1471,7 +1524,7 @@ function renderForecast(data, tideEvents) {
         );
         cell.title =
           `KI ${ki.toFixed(2)} (${stars}★)\n` +
-          'Formula: (S_w^0.33 × S_g^0.27 × S_d^0.20 × S_t^0.10 × S_l^0.10)\n' +
+          'Formula: (S_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05) + Δ_wave\n' +
           `Scores:\n${reasons.join('\n')}`;
         const sub = cell.querySelector('.cell-sub');
         if (sub) {
