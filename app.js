@@ -789,7 +789,11 @@ const SHORE_NORMAL_DEG = 180;
 
 function waveDelta({ waveHeight, wavePeriod, windDirDegrees }) {
   if (!Number.isFinite(waveHeight) || waveHeight < 0.3) {
-    return { delta: 0, tag: 'flat/none' };
+    return {
+      delta: 0,
+      tag: 'flat/none',
+      detail: 'Wave height < 0.3m or missing',
+    };
   }
 
   const H = waveHeight;
@@ -814,7 +818,36 @@ function waveDelta({ waveHeight, wavePeriod, windDirDegrees }) {
   const quality = clamp(good - bad, -1, 1);
   const delta = 0.18 * quality;
 
-  return { delta, tag: quality >= 0 ? 'good' : 'bad' };
+  const windTag =
+    windToShore > 0.25
+      ? 'onshore'
+      : windToShore < -0.25
+      ? 'offshore'
+      : 'cross-shore';
+  const periodText = P === null ? 'n/a' : `${P.toFixed(1)}s`;
+  const detailParts = [];
+  if (quality >= 0) {
+    const positives = [];
+    if (heightGood > 0.6) positives.push('mid-height');
+    if (periodGood > 0.6) positives.push('longer period');
+    if (windClean > 0.6) positives.push('clean wind');
+    detailParts.push(
+      positives.length ? `good: ${positives.join(', ')}` : 'good: mixed',
+    );
+  } else {
+    const issues = [];
+    if (tooBig > 0.2) issues.push('too big');
+    if (tooShort > 0.2) issues.push('short period');
+    if (onshore > 0.2) issues.push('onshore wind');
+    detailParts.push(
+      issues.length ? `issues: ${issues.join(', ')}` : 'issues: mixed',
+    );
+  }
+  const detail = `H ${H.toFixed(2)}m, P ${periodText}, ${windTag} wind; ${detailParts.join(
+    ', ',
+  )}`;
+
+  return { delta, tag: quality >= 0 ? 'good' : 'bad', detail };
 }
 
 function kiteIndex({
@@ -828,6 +861,7 @@ function kiteIndex({
   wavePeriod,
 }) {
   const reasons = [];
+  const details = {};
 
   const windValue = Number.isFinite(windSpeed) ? windSpeed : 0;
   const sw =
@@ -839,6 +873,7 @@ function kiteIndex({
   reasons.push(
     `S_w wind speed: ${sw.toFixed(2)} (wind ${Math.round(windValue)} kt)`,
   );
+  details.wind = `Wind ${Math.round(windValue)} kt \u2192 S_w ${sw.toFixed(2)}`;
 
   const gustFactor = windValue ? gustSpeed / windValue : null;
   let sg = 0;
@@ -855,6 +890,10 @@ function kiteIndex({
         )})`
       : 'S_g gust steadiness: n/a',
   );
+  details.gust =
+    gustFactor !== null
+      ? `Gust factor ${gustFactor.toFixed(2)} \u2192 S_g ${sg.toFixed(2)}`
+      : `Gust factor n/a \u2192 S_g ${sg.toFixed(2)}`;
 
   let sd = 0.2;
   if (Number.isFinite(windDirDegrees)) {
@@ -869,6 +908,7 @@ function kiteIndex({
     ? `${Math.round(windDirDegrees)}°`
     : 'n/a';
   reasons.push(`S_d direction: ${sd.toFixed(2)} (${directionLabel})`);
+  details.direction = `Direction ${directionLabel} \u2192 S_d ${sd.toFixed(2)}`;
 
   let st = 0.5;
   if (tideLevel && tideRange && tideRange.max > tideRange.min) {
@@ -880,11 +920,21 @@ function kiteIndex({
   }
   st = Math.max(0.3, st);
   reasons.push(`S_t tide: ${st.toFixed(2)} (prefers low)`);
+  if (tideLevel && tideRange && tideRange.max > tideRange.min) {
+    details.tide = `Tide ${tideLevel.height.toFixed(2)}m (range ${tideRange.min.toFixed(
+      2,
+    )}-${tideRange.max.toFixed(2)}m) \u2192 S_t ${st.toFixed(2)}`;
+  } else {
+    details.tide = `Tide data n/a \u2192 S_t ${st.toFixed(2)}`;
+  }
 
   const sl = isDaylightNow ? 1.0 : 0.0;
   reasons.push(
     `S_l daylight: ${sl.toFixed(2)} (${isDaylightNow ? 'day' : 'night'})`,
   );
+  details.daylight = `${
+    isDaylightNow ? 'Daylight' : 'Night'
+  } \u2192 S_l ${sl.toFixed(2)}`;
 
   const baseKi =
     Math.pow(sw, 0.35) *
@@ -893,7 +943,7 @@ function kiteIndex({
     Math.pow(st, 0.1) *
     Math.pow(sl, 0.05);
 
-  const { delta: waveBonus, tag: waveTag } = waveDelta({
+  const { delta: waveBonus, tag: waveTag, detail: waveDetail } = waveDelta({
     waveHeight,
     wavePeriod,
     windDirDegrees,
@@ -907,6 +957,12 @@ function kiteIndex({
           waveBonus >= 0 ? '+' : ''
         }${waveBonus.toFixed(2)}`,
   );
+  details.waves =
+    waveBonus === 0
+      ? `${waveDetail} \u2192 \u0394_wave +0.00`
+      : `${waveDetail} \u2192 \u0394_wave ${
+          waveBonus >= 0 ? '+' : ''
+        }${waveBonus.toFixed(2)}`;
 
   let stars = 0;
   if (ki >= 0.8) stars = 5;
@@ -919,6 +975,8 @@ function kiteIndex({
     stars,
     reasons,
     gustFactor,
+    scores: { sw, sg, sd, st, sl, waveBonus },
+    details,
   };
 }
 
@@ -970,6 +1028,128 @@ function setCellSubText(cell, text) {
   }
 }
 
+function formatScoreTag(label, value) {
+  if (!Number.isFinite(value)) return `[${label} —]`;
+  return `[${label} ${value.toFixed(2)}]`;
+}
+
+function formatDeltaTag(value) {
+  if (!Number.isFinite(value)) return '[Δ —]';
+  const sign = value >= 0 ? '+' : '';
+  return `[Δ ${sign}${value.toFixed(2)}]`;
+}
+
+function starText(stars) {
+  return '★'.repeat(stars) + '☆'.repeat(Math.max(0, 5 - stars));
+}
+
+function classifyScore(value) {
+  if (!Number.isFinite(value)) return { label: 'n/a', icon: '•' };
+  if (value >= 0.75) return { label: 'good', icon: '✔' };
+  if (value >= 0.5) return { label: 'fair', icon: '•' };
+  if (value >= 0.35) return { label: 'moderate', icon: '•' };
+  return { label: 'poor', icon: '❌' };
+}
+
+function waveSummaryLabel(waveDeltaValue) {
+  if (!Number.isFinite(waveDeltaValue) || waveDeltaValue === 0) {
+    return { label: 'neutral', icon: '•' };
+  }
+  return waveDeltaValue > 0
+    ? { label: 'good', icon: '✔' }
+    : { label: 'bad', icon: '❌' };
+}
+
+function kiHeadline(ki) {
+  if (!Number.isFinite(ki)) return 'No data';
+  if (ki >= 0.8) return 'Excellent conditions';
+  if (ki >= 0.65) return 'Good conditions';
+  if (ki >= 0.5) return 'Decent conditions';
+  if (ki >= 0.35) return 'Mixed conditions';
+  return 'Poor conditions';
+}
+
+function formatWaveReason(detail) {
+  if (!detail) return 'n/a';
+  const match = detail.match(/;\s*(.*)$/);
+  if (!match) return detail;
+  const summary = match[1]
+    .replace(/^issues:\s*/i, '')
+    .replace(/^good:\s*/i, '');
+  return summary || detail;
+}
+
+function formatKiTooltip(score, extras = {}) {
+  const sw = score.scores?.sw;
+  const sg = score.scores?.sg;
+  const sd = score.scores?.sd;
+  const st = score.scores?.st;
+  const sl = score.scores?.sl;
+  const wave = score.scores?.waveBonus;
+
+  const windSpeedText = Number.isFinite(extras.windSpeed)
+    ? `${Math.round(extras.windSpeed)} kt`
+    : 'n/a';
+  const gustFactorText = Number.isFinite(score.gustFactor)
+    ? score.gustFactor.toFixed(2)
+    : 'n/a';
+  const directionText = Number.isFinite(extras.windDirDegrees)
+    ? `${Math.round(extras.windDirDegrees)}°`
+    : 'n/a';
+  const tideText =
+    Number.isFinite(extras.tideHeight) &&
+    Number.isFinite(extras.tideMin) &&
+    Number.isFinite(extras.tideMax)
+      ? `${extras.tideHeight.toFixed(2)}m (${extras.tideMin.toFixed(
+          2,
+        )}-${extras.tideMax.toFixed(2)}m)`
+      : 'n/a';
+  const daylightText = extras.isDaylightNow ? 'daytime' : 'night';
+  const waveReason = formatWaveReason(score.details?.waves);
+
+  const swClass = classifyScore(sw);
+  const sgClass = classifyScore(sg);
+  const sdClass = classifyScore(sd);
+  const stClass = classifyScore(st);
+  const slClass = classifyScore(sl);
+  const waveClass = waveSummaryLabel(wave);
+
+  const headline = kiHeadline(score.ki);
+  const waveValue = Number.isFinite(wave) ? wave.toFixed(2) : '0.00';
+  const waveSigned = Number.isFinite(wave) && wave > 0 ? `+${waveValue}` : waveValue;
+
+  return (
+    `Kiting Index: ${score.ki.toFixed(2)}  ${starText(score.stars)}\n` +
+    `${headline}\n\n` +
+    `Main factors:\n` +
+    `• ${waveClass.icon} Waves: ${waveSigned}  (${waveReason})\n` +
+    `• ${sgClass.icon} Gusts: ${Number.isFinite(sg) ? sg.toFixed(2) : '—'}   (${sgClass.label})\n` +
+    `• ${sdClass.icon} Direction: ${Number.isFinite(sd) ? sd.toFixed(2) : '—'} (${sdClass.label})\n\n` +
+    `Score breakdown:\n` +
+    `Wind speed        ${Number.isFinite(sw) ? sw.toFixed(2) : '—'}   ${
+      swClass.label
+    } (${windSpeedText})\n` +
+    `Gust steadiness   ${Number.isFinite(sg) ? sg.toFixed(2) : '—'}   ${
+      sgClass.label
+    } (${gustFactorText})\n` +
+    `Wind direction    ${Number.isFinite(sd) ? sd.toFixed(2) : '—'}   ${
+      sdClass.label
+    } (${directionText})\n` +
+    `Tide suitability  ${Number.isFinite(st) ? st.toFixed(2) : '—'}   ${
+      stClass.label
+    } (${tideText})\n` +
+    `Daylight          ${Number.isFinite(sl) ? sl.toFixed(2) : '—'}   ${
+      slClass.label
+    } (${daylightText})\n` +
+    `Wave adjustment  ${waveSigned}   ${waveClass.label} (${waveReason})\n\n` +
+    `Formula:\n` +
+    `KI = clamp(\n` +
+    `  (S_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05)\n` +
+    `  + Δ_wave\n` +
+    `)`
+  );
+}
+
 function applyColumnWash(cell, stars) {
   if (stars >= 4) {
     cell.classList.add('col-score-high');
@@ -980,7 +1160,7 @@ function applyColumnWash(cell, stars) {
   }
 }
 
-function buildDirectionCell(direction, degrees) {
+function buildDirectionCell(direction, degrees, subText) {
   const cell = document.createElement('td');
   cell.className = 'data-cell wind-direction-cell';
   const wrapper = document.createElement('div');
@@ -992,6 +1172,12 @@ function buildDirectionCell(direction, degrees) {
   dirEl.className = 'cell-main';
   dirEl.textContent = direction;
   wrapper.append(arrow, dirEl);
+  if (subText) {
+    const sub = document.createElement('span');
+    sub.className = 'cell-sub';
+    sub.textContent = subText;
+    wrapper.appendChild(sub);
+  }
   cell.appendChild(wrapper);
   return cell;
 }
@@ -1272,12 +1458,22 @@ function renderForecast(data, tideEvents) {
   headerCells.forEach((cell, index) => {
     if (columnScores[index]) {
       applyColumnWash(cell, columnScores[index].stars);
-      cell.title =
-        `KI ${columnScores[index].ki.toFixed(2)} · ${'★'.repeat(
-          columnScores[index].stars,
-        )}\n` +
-        'Formula: (S_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05) + Δ_wave\n' +
-        `Scores:\n${columnScores[index].reasons.join('\n')}`;
+      const score = columnScores[index];
+      const windSpeed = data.hourly.wind_speed_10m[columns[index].index];
+      const degrees = data.hourly.wind_direction_10m[columns[index].index];
+      const tideLevel = tideLevelAt(tideSeries, columns[index].time);
+      cell.title = formatKiTooltip(score, {
+        windSpeed,
+        windDirDegrees: degrees,
+        tideHeight: tideLevel?.height ?? null,
+        tideMin: tideRange?.min ?? null,
+        tideMax: tideRange?.max ?? null,
+        isDaylightNow: isDaylight(
+          columns[index].time,
+          config.latitude,
+          config.longitude,
+        ),
+      });
     }
   });
 
@@ -1328,6 +1524,9 @@ function renderForecast(data, tideEvents) {
         const speed = data.hourly.wind_speed_10m[column.index];
         const gusts = data.hourly.wind_gusts_10m[column.index];
         const gustFactor = speed ? gusts / speed : null;
+        const score = columnScores[colIndex];
+        const swTag = formatScoreTag('S_w', score.scores?.sw);
+        const sgTag = formatScoreTag('S_g', score.scores?.sg);
         const windColor = colorForValue(speed, [
           { value: 0, color: '#0a1a2b' },
           { value: 8, color: '#12314f' },
@@ -1356,12 +1555,20 @@ function renderForecast(data, tideEvents) {
         );
         cell.classList.add('wind-power-cell');
         if (gustFactor) {
-          setCellSubText(cell, `${gustFactor.toFixed(2)}`);
-          const sub = cell.querySelector('.cell-sub');
-          if (sub) {
-            sub.classList.add('gf-value');
-          }
+          setCellSubText(
+            cell,
+            `GF ${gustFactor.toFixed(2)} ${swTag} ${sgTag}`,
+          );
+        } else {
+          setCellSubText(cell, `GF n/a ${swTag} ${sgTag}`);
         }
+        const sub = cell.querySelector('.cell-sub');
+        if (sub) {
+          sub.classList.add('gf-value');
+        }
+        cell.title = [score.details?.wind, score.details?.gust]
+          .filter(Boolean)
+          .join('\n');
         tr.appendChild(cell);
         return;
       }
@@ -1369,9 +1576,14 @@ function renderForecast(data, tideEvents) {
       if (row.key === 'wind_direction_10m') {
         const degrees = data.hourly.wind_direction_10m[column.index];
         const direction = windCompass(degrees);
-        const cell = buildDirectionCell(direction, degrees);
+        const score = columnScores[colIndex];
+        const sdTag = formatScoreTag('S_d', score.scores?.sd);
+        const cell = buildDirectionCell(direction, degrees, sdTag);
         cell.style.background = 'rgba(8, 18, 28, 0.5)';
         applyColumnWash(cell, columnScores[colIndex].stars);
+        if (score.details?.direction) {
+          cell.title = score.details.direction;
+        }
         tr.appendChild(cell);
         return;
       }
@@ -1379,15 +1591,17 @@ function renderForecast(data, tideEvents) {
       if (row.key === 'wave') {
         const waveHeight = data.hourly.wave_height?.[column.index];
         const wavePeriod = data.hourly.wave_period?.[column.index];
+        const score = columnScores[colIndex];
         const heightText = Number.isFinite(waveHeight)
           ? Number(waveHeight).toFixed(1).replace(/\.0$/, '')
           : '—';
         const periodText = Number.isFinite(wavePeriod)
           ? `${Number(wavePeriod).toFixed(1).replace(/\.0$/, '')}s`
           : '';
+        const waveTag = formatDeltaTag(score.scores?.waveBonus);
         const cell = buildDataCell(
           heightText,
-          periodText,
+          periodText ? `${periodText} ${waveTag}` : waveTag,
           colorForValue(waveHeight, [
             { value: 0, color: '#06101f' },
             { value: 0.5, color: '#12314f' },
@@ -1399,6 +1613,9 @@ function renderForecast(data, tideEvents) {
           ]),
         );
         applyColumnWash(cell, columnScores[colIndex].stars);
+        if (score.details?.waves) {
+          cell.title = score.details.waves;
+        }
         tr.appendChild(cell);
         return;
       }
@@ -1409,10 +1626,15 @@ function renderForecast(data, tideEvents) {
           windowStart.getTime() + windowSize * 60 * 60 * 1000,
         );
         const tideText = tideForWindow(tideSeries, windowStart, windowEnd);
-        const tideLevel = tideLevelAt(tideSeries, windowStart);
-        const heightValue = tideLevel ? tideLevel.height : null;
-        const cell = buildDataCell(tideText, '');
+        const score = columnScores[colIndex];
+        const cell = buildDataCell(
+          tideText,
+          formatScoreTag('S_t', score.scores?.st),
+        );
         applyColumnWash(cell, columnScores[colIndex].stars);
+        if (score.details?.tide) {
+          cell.title = score.details.tide;
+        }
         tr.appendChild(cell);
         return;
       }
@@ -1502,14 +1724,19 @@ function renderForecast(data, tideEvents) {
       }
 
       if (row.key === 'time') {
+        const score = columnScores[colIndex];
         const cell = buildTimeCell(column.time);
         applyColumnWash(cell, columnScores[colIndex].stars);
+        setCellSubText(cell, formatScoreTag('S_l', score.scores?.sl));
+        if (score.details?.daylight) {
+          cell.title = score.details.daylight;
+        }
         tr.appendChild(cell);
         return;
       }
 
       if (row.key === 'ki') {
-        const { ki, stars, reasons } = columnScores[colIndex];
+        const { ki, stars } = columnScores[colIndex];
         const starText = stars ? '★'.repeat(stars) : '―';
         const cell = buildDataCell(
           ki.toFixed(2),
@@ -1522,10 +1749,21 @@ function renderForecast(data, tideEvents) {
             { value: 0.8, color: '#7ed957' },
           ]),
         );
-        cell.title =
-          `KI ${ki.toFixed(2)} (${stars}★)\n` +
-          'Formula: (S_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05) + Δ_wave\n' +
-          `Scores:\n${reasons.join('\n')}`;
+        cell.classList.add('ki-cell');
+        const score = columnScores[colIndex];
+        const tideLevel = tideLevelAt(tideSeries, column.time);
+        cell.title = formatKiTooltip(score, {
+          windSpeed: data.hourly.wind_speed_10m[column.index],
+          windDirDegrees: data.hourly.wind_direction_10m[column.index],
+          tideHeight: tideLevel?.height ?? null,
+          tideMin: tideRange?.min ?? null,
+          tideMax: tideRange?.max ?? null,
+          isDaylightNow: isDaylight(
+            column.time,
+            config.latitude,
+            config.longitude,
+          ),
+        });
         const sub = cell.querySelector('.cell-sub');
         if (sub) {
           sub.classList.add(stars ? 'ki-stars' : 'ki-zero');
