@@ -200,6 +200,12 @@ h2 {
 .current {
   max-width: 1040px;
   margin: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  animation: none;
+  opacity: 1;
 }
 
 .score-value {
@@ -209,6 +215,12 @@ h2 {
 
 .forecast {
   gap: 14px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  animation: none;
+  opacity: 1;
 }
 
 .forecast-meta {
@@ -280,12 +292,10 @@ h2 {
   background: rgba(5, 13, 22, 0.4);
 }
 
-.forecast-grid thead .cell-main {
-  font-size: 0.8rem;
-}
-
-.forecast-grid thead .cell-sub {
-  font-size: 0.75rem;
+.forecast-grid thead .cell-line {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .label-cell {
@@ -440,6 +450,11 @@ h2 {
   padding-bottom: 2px;
 }
 
+.wind-direction-cell .arrow {
+  width: 20px;
+  height: 3px;
+}
+
 .wind-cell .arrow {
   align-self: center;
 }
@@ -563,10 +578,10 @@ h2 {
 
 .arrow {
   display: inline-block;
-  width: 20px;
-  height: 2px;
+  width: 18px;
+  height: 3px;
   background: var(--accent);
-  border-radius: 999px;
+  border-radius: 2px;
   position: relative;
   transform: rotate(0deg);
   transition: transform 0.2s ease;
@@ -576,9 +591,9 @@ h2 {
 .arrow::after {
   content: "";
   position: absolute;
-  right: -7px;
-  top: -7px;
-  border: 7px solid transparent;
+  right: -6px;
+  top: -5px;
+  border: 6px solid transparent;
   border-left-color: var(--accent);
 }
 
