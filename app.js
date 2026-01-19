@@ -13,6 +13,10 @@ const config = {
     // Server-side cached proxy.
     apiUrl: '/weather.php',
   },
+  waves: {
+    // Open-Meteo Marine proxy (uses waves-cache.json if available).
+    apiUrl: '/waves.php',
+  },
   tide: {
     provider: 'ukho',
     stationId: '0085',
@@ -50,8 +54,10 @@ const ui = {
 const cacheKeys = {
   weather: 'forecast.weather',
   tides: 'forecast.tides',
+  waves: 'forecast.waves',
   weatherUpdatedAt: 'forecast.weatherUpdatedAt',
   tidesUpdatedAt: 'forecast.tidesUpdatedAt',
+  wavesUpdatedAt: 'forecast.wavesUpdatedAt',
 };
 
 const formatWindow = new Intl.DateTimeFormat('en-GB', {
@@ -443,6 +449,24 @@ function buildUrl() {
   const base =
     config.weather?.apiUrl || 'https://api.open-meteo.com/v1/forecast';
   return `${base}?${params.toString()}`;
+}
+
+function buildWavesUrl(options = {}) {
+  const params = new URLSearchParams({
+    latitude: config.latitude,
+    longitude: config.longitude,
+    timezone: config.timezone,
+    forecast_days: String(config.waves?.forecastDays || config.forecastDays),
+    hourly: ['wave_height', 'wave_period', 'wave_direction'].join(','),
+  });
+  const base =
+    config.waves?.apiUrl || 'https://marine-api.open-meteo.com/v1/marine';
+  const url = new URL(base, window.location.origin);
+  params.forEach((value, key) => url.searchParams.set(key, value));
+  if (options.force && url.origin === window.location.origin) {
+    url.searchParams.set('refresh', '1');
+  }
+  return url.toString();
 }
 
 function setTideStatus(message) {
@@ -1157,6 +1181,7 @@ function renderForecast(data, tideEvents) {
     { label: 'Temp (°C)', abbrev: 'Temp', key: 'temperature_2m' },
     { label: 'Wind (kt)', abbrev: 'Wind', key: 'wind_power' },
     { label: 'Direction', abbrev: 'Dir', key: 'wind_direction_10m' },
+    { label: 'Wave (m)', abbrev: 'Wave', key: 'wave' },
     { label: 'Rain (mm)', abbrev: 'Rain', key: 'precipitation' },
     { label: 'Sky', abbrev: 'Sky', key: 'sky' },
     { label: 'Moon', abbrev: 'Moon', key: 'moon' },
@@ -1228,6 +1253,9 @@ function renderForecast(data, tideEvents) {
     if (row.key === 'tide_curve') {
       label.title = 'Dark region indicates predicted tides';
     }
+    if (row.key === 'wave') {
+      label.title = 'Wave height (m) with period (s)';
+    }
     tr.appendChild(label);
 
     if (row.key === 'tide_curve') {
@@ -1290,6 +1318,33 @@ function renderForecast(data, tideEvents) {
         const direction = windCompass(degrees);
         const cell = buildDirectionCell(direction, degrees);
         cell.style.background = 'rgba(8, 18, 28, 0.5)';
+        applyColumnWash(cell, columnScores[colIndex].stars);
+        tr.appendChild(cell);
+        return;
+      }
+
+      if (row.key === 'wave') {
+        const waveHeight = data.hourly.wave_height?.[column.index];
+        const wavePeriod = data.hourly.wave_period?.[column.index];
+        const heightText = Number.isFinite(waveHeight)
+          ? Number(waveHeight).toFixed(1).replace(/\.0$/, '')
+          : '—';
+        const periodText = Number.isFinite(wavePeriod)
+          ? `${Number(wavePeriod).toFixed(1).replace(/\.0$/, '')}s`
+          : '';
+        const cell = buildDataCell(
+          heightText,
+          periodText,
+          colorForValue(waveHeight, [
+            { value: 0, color: '#06101f' },
+            { value: 0.5, color: '#12314f' },
+            { value: 1, color: '#1a4f86' },
+            { value: 1.5, color: '#1a7a63' },
+            { value: 2, color: '#6b8f1a' },
+            { value: 2.5, color: '#c47c13' },
+            { value: 3, color: '#c0392b' },
+          ]),
+        );
         applyColumnWash(cell, columnScores[colIndex].stars);
         tr.appendChild(cell);
         return;
@@ -1472,11 +1527,50 @@ function saveCache(weather, tides, weatherUpdatedAt, tidesUpdatedAt) {
     localStorage.setItem(cacheKeys.tidesUpdatedAt, String(tidesUpdatedAt));
 }
 
+function alignHourlySeries(targetTimes, sourceTimes, sourceValues) {
+  if (!Array.isArray(targetTimes) || !Array.isArray(sourceTimes)) {
+    return [];
+  }
+  const lookup = new Map();
+  sourceTimes.forEach((time, index) => {
+    lookup.set(time, sourceValues?.[index] ?? null);
+  });
+  return targetTimes.map((time) => (lookup.has(time) ? lookup.get(time) : null));
+}
+
+function mergeWaveData(weather, waves) {
+  if (!weather?.hourly?.time || !waves?.hourly?.time) {
+    return weather;
+  }
+  const targetTimes = weather.hourly.time;
+  const sourceTimes = waves.hourly.time;
+  const waveFields = ['wave_height', 'wave_period', 'wave_direction'];
+  const mergedHourly = { ...weather.hourly };
+  waveFields.forEach((field) => {
+    if (Array.isArray(waves.hourly[field])) {
+      mergedHourly[field] = alignHourlySeries(
+        targetTimes,
+        sourceTimes,
+        waves.hourly[field],
+      );
+    }
+  });
+  return { ...weather, hourly: mergedHourly };
+}
+
+function saveWavesCache(waves, updatedAt) {
+  localStorage.setItem(cacheKeys.waves, JSON.stringify(waves));
+  if (updatedAt)
+    localStorage.setItem(cacheKeys.wavesUpdatedAt, String(updatedAt));
+}
+
 function loadCache() {
   const weatherRaw = localStorage.getItem(cacheKeys.weather);
   const tidesRaw = localStorage.getItem(cacheKeys.tides);
+  const wavesRaw = localStorage.getItem(cacheKeys.waves);
   const weatherUpdatedAt = localStorage.getItem(cacheKeys.weatherUpdatedAt);
   const tidesUpdatedAt = localStorage.getItem(cacheKeys.tidesUpdatedAt);
+  const wavesUpdatedAt = localStorage.getItem(cacheKeys.wavesUpdatedAt);
   if (!weatherRaw) return null;
   try {
     const weather = JSON.parse(weatherRaw);
@@ -1486,11 +1580,14 @@ function loadCache() {
           date: event.date ? new Date(event.date) : null,
         }))
       : [];
+    const waves = wavesRaw ? JSON.parse(wavesRaw) : null;
     return {
       weather,
       tides,
+      waves,
       weatherUpdatedAt: weatherUpdatedAt || null,
       tidesUpdatedAt: tidesUpdatedAt || null,
+      wavesUpdatedAt: wavesUpdatedAt || null,
     };
   } catch (error) {
     console.error(error);
@@ -1504,8 +1601,9 @@ function renderFromCache() {
     return false;
   }
 
-  renderCurrent(cached.weather);
-  renderForecast(cached.weather, cached.tides);
+  const mergedWeather = mergeWaveData(cached.weather, cached.waves);
+  renderCurrent(mergedWeather);
+  renderForecast(mergedWeather, cached.tides);
   setTideStatus('');
   setUpdatedLabel(
     ui.weatherUpdated,
@@ -1531,6 +1629,19 @@ function renderFromCache() {
       });
   }
 
+  if (!cached.waves) {
+    loadWaves({ force: false })
+      .then((res) => {
+        if (!res?.data) return;
+        const freshWeather = mergeWaveData(cached.weather, res.data);
+        renderForecast(freshWeather, cached.tides);
+        saveWavesCache(res.data, res.updatedAt);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
   return cached;
 }
 
@@ -1549,9 +1660,10 @@ async function loadForecast(options = {}) {
   setLocation();
 
   try {
-    const [weatherResponse, tideRes] = await Promise.all([
+    const [weatherResponse, tideRes, wavesRes] = await Promise.all([
       fetch(buildUrl()),
       loadTides({ force }),
+      loadWaves({ force }),
     ]);
     if (!weatherResponse.ok) {
       throw new Error(`Weather proxy error: ${weatherResponse.status}`);
@@ -1560,15 +1672,49 @@ async function loadForecast(options = {}) {
     const data = await weatherResponse.json();
     const tideItems = tideRes?.items || [];
     const tidesUpdatedAt = tideRes?.updatedAt || null;
+    const wavesData = wavesRes?.data || null;
+    const wavesUpdatedAt = wavesRes?.updatedAt || null;
+    const mergedWeather = mergeWaveData(data, wavesData);
 
-    renderCurrent(data);
-    renderForecast(data, tideItems);
+    renderCurrent(mergedWeather);
+    renderForecast(mergedWeather, tideItems);
     setTideStatus('');
     setUpdatedLabel(ui.weatherUpdated, 'Weather updated', weatherUpdatedAt);
     setUpdatedLabel(ui.tidesUpdated, 'Tides updated', tidesUpdatedAt);
     saveCache(data, tideItems, weatherUpdatedAt, tidesUpdatedAt);
+    if (wavesData) {
+      saveWavesCache(wavesData, wavesUpdatedAt);
+    }
   } catch (error) {
     handleError(error);
+  }
+}
+
+async function loadWaves(options = {}) {
+  try {
+    const response = await fetch(buildWavesUrl(options));
+    const updatedAt = response.headers.get('X-Updated-At');
+    if (!response.ok) {
+      let details = '';
+      try {
+        const payload = await response.json();
+        if (payload?.error) details = payload.error;
+        if (payload?.details) {
+          details = details ? `${details} ${payload.details}` : payload.details;
+        }
+      } catch (error) {
+        details = await response.text();
+      }
+      const message = details
+        ? `Wave proxy error: ${response.status} (${details})`
+        : `Wave proxy error: ${response.status}`;
+      throw new Error(message);
+    }
+    const data = await response.json();
+    return { data, updatedAt };
+  } catch (error) {
+    console.error(error);
+    return { data: null, updatedAt: null };
   }
 }
 
