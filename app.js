@@ -1503,25 +1503,7 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
     );
     svg.appendChild(circle);
 
-    if (
-      !renderTideChart.lastLabelX ||
-      Math.abs(cx - renderTideChart.lastLabelX) > 70
-    ) {
-      const label = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'text',
-      );
-      label.setAttribute('x', cx);
-      label.setAttribute('y', Math.max(cy - 6, padding - 2));
-      label.setAttribute('text-anchor', 'middle');
-      label.setAttribute(
-        'class',
-        event.predicted ? 'tide-label predicted' : 'tide-label',
-      );
-      label.textContent = `${event.timeText} · ${event.height}`;
-      svg.appendChild(label);
-      renderTideChart.lastLabelX = cx;
-    }
+    // Labels removed for a cleaner tide curve.
   });
 }
 
