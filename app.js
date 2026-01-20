@@ -331,9 +331,9 @@ function lerpColor(start, end, t) {
 }
 
 function timeGradient(time) {
-  const hour = time.getHours() + time.getMinutes() / 60;
-  const t = hour <= 12 ? hour / 12 : (24 - hour) / 12;
-  return lerpColor('#02060b', '#1e4e9c', t);
+  const dayStart = new Date(time.getFullYear(), time.getMonth(), time.getDate());
+  const dayIndex = Math.floor(dayStart.getTime() / 86400000);
+  return dayIndex % 2 === 0 ? '#1c4890' : '#122f5d';
 }
 
 function toRad(degrees) {
