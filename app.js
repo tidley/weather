@@ -588,7 +588,7 @@ function renderCurrentFromForecast(data, tideSeries, column, score) {
   }
   if (ui.currentGustFactor) {
     ui.currentGustFactor.textContent = Number.isFinite(gustFactor)
-      ? gustFactor.toFixed(2)
+      ? gustFactor.toFixed(1)
       : '—';
   }
   if (ui.currentWaves) {
@@ -629,7 +629,7 @@ function renderCurrentFromForecast(data, tideSeries, column, score) {
   }
   if (ui.currentTide) {
     ui.currentTide.textContent = tideLevel
-      ? `${tideLevel.height.toFixed(2)} m`
+      ? `${tideLevel.height.toFixed(1)} m`
       : '—';
   }
   if (ui.currentScore && score) {
@@ -664,7 +664,7 @@ function formatHeight(value) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return '—';
   }
-  return `${Number(value).toFixed(2)} m`;
+  return `${Number(value).toFixed(1)} m`;
 }
 
 function normalizeEventType(rawType) {
@@ -787,7 +787,7 @@ function tideForWindow(tideEvents, windowStart, windowEnd) {
   if (!within.length) {
     const level = tideLevelAt(tideEvents, windowStart);
     if (!level) return '—';
-    return `${level.height.toFixed(2)}`;
+    return `${level.height.toFixed(1)}`;
   }
   return within
     .slice(0, 2)
@@ -795,7 +795,7 @@ function tideForWindow(tideEvents, windowStart, windowEnd) {
       const value = parseHeightNumber(event.height);
       return value === null
         ? `${event.type[0]} —`
-        : `${event.type[0]} ${value.toFixed(2)}`;
+        : `${event.type[0]} ${value.toFixed(1)}`;
     })
     .join(', ');
 }
@@ -918,7 +918,7 @@ function extendTideEvents(tideEvents, horizonEnd) {
     const heightText =
       cap === null || !Number.isFinite(cap)
         ? null
-        : `${Math.max(cap, 0).toFixed(2)}m`;
+        : `${Math.max(cap, 0).toFixed(1)}m`;
 
     base.push({
       type: nextType,
@@ -1374,13 +1374,6 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
     const rect = cell.getBoundingClientRect();
     return rect.left - svgLeft + rect.width / 2;
   });
-  const headerBounds = headerCells.map((cell) => {
-    const rect = cell.getBoundingClientRect();
-    return {
-      left: rect.left - svgLeft,
-      right: rect.left - svgLeft + rect.width,
-    };
-  });
   const startX = headerCenters[0];
   const endX = headerCenters[headerCenters.length - 1];
   const start = columns[0]?.time ?? new Date();
@@ -1451,22 +1444,6 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
     shade.setAttribute('class', 'tide-predicted-zone');
     svg.appendChild(shade);
   }
-
-  columns.forEach((column, index) => {
-    if (column.isDaylight) return;
-    const bounds = headerBounds[index];
-    if (!bounds) return;
-    const shade = document.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'rect',
-    );
-    shade.setAttribute('x', bounds.left);
-    shade.setAttribute('y', 0);
-    shade.setAttribute('width', Math.max(0, bounds.right - bounds.left));
-    shade.setAttribute('height', svgHeight);
-    shade.setAttribute('class', 'tide-night-cover');
-    svg.appendChild(shade);
-  });
 
   events.forEach((event) => {
     if (!event.type || (event.type !== 'HIGH' && event.type !== 'LOW')) return;
@@ -1765,7 +1742,7 @@ function renderForecast(data, tideEvents) {
         const gustFactor = speed ? gusts / speed : null;
         const score = columnScores[colIndex];
         const gfText = Number.isFinite(gustFactor)
-          ? gustFactor.toFixed(2)
+          ? gustFactor.toFixed(1)
           : '—';
         const cell = buildDataCell(
           gfText,
