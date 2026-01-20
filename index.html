@@ -18,11 +18,12 @@
 
     <section class="summary-bar" aria-live="polite">
       <div class="summary-tile" id="decision-band">
-        <div class="summary-item summary-overall-line">
+ 
+        <div class="summary-grid">
+                 <div class="summary-item summary-overall-line">
           <span class="summary-title">OVERALL</span>
           <span id="summary-overall">—</span>
         </div>
-        <div class="summary-grid">
           <div class="summary-item">
             <span class="summary-title">WIND</span>
             <span id="summary-wind">— kt</span>
@@ -52,49 +53,64 @@
             <span>—</span>
           </div>
         </div>
-        <div class="chips-row" id="summary-chips"></div>
-      </div>
-    </section>
+                  <div class="chips-row" id="summary-chips"></div>
 
-    <section class="card forecast" id="forecast-card">
-      <div class="forecast-controls">
-        <label class="toggle">
-          <input type="checkbox" id="toggle-night" />
-          Hide night
-        </label>
-      </div>
-      <div class="forecast-scroll">
-        <table class="forecast-grid" id="forecast-grid">
-          <thead>
-            <tr id="forecast-head-row">
-              <th class="label-cell">Date</th>
-            </tr>
-          </thead>
-          <tbody id="forecast-body"></tbody>
-        </table>
-      </div>
-    </section>
+      </section>
 
-    <footer class="page-footer">
-      <p>
-        Weather data: <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> ·
-        Tide data: <a href="https://www.admiralty.co.uk/" target="_blank" rel="noreferrer">UKHO Admiralty</a> ·
-        Icons: <a href="https://bas.dev/work/meteocons/" target="_blank" rel="noreferrer">Meteocons</a>
-      </p>
-    </footer>
-  </main>
+      <section class="card forecast" id="forecast-card">
+        <div class="forecast-controls">
+          <label class="toggle">
+            <input type="checkbox" id="toggle-night" />
+            Hide night
+          </label>
+        </div>
+        <div class="forecast-scroll">
+          <table class="forecast-grid" id="forecast-grid">
+            <thead>
+              <tr id="forecast-head-row">
+                <th class="label-cell">Date</th>
+              </tr>
+            </thead>
+            <tbody id="forecast-body"></tbody>
+          </table>
+        </div>
+      </section>
 
-  <div class="ambient"></div>
+      <footer class="page-footer">
+        <p>
+          Weather data:
+          <a href="https://open-meteo.com/" target="_blank" rel="noreferrer"
+            >Open-Meteo</a
+          >
+          · Tide data:
+          <a
+            href="https://www.admiralty.co.uk/"
+            target="_blank"
+            rel="noreferrer"
+            >UKHO Admiralty</a
+          >
+          · Icons:
+          <a
+            href="https://bas.dev/work/meteocons/"
+            target="_blank"
+            rel="noreferrer"
+            >Meteocons</a
+          >
+        </p>
+      </footer>
+    </main>
 
-  <template id="forecast-cell">
-    <td class="data-cell">
-      <div class="cell-stack">
-        <span class="cell-main"></span>
-        <span class="cell-sub"></span>
-      </div>
-    </td>
-  </template>
+    <div class="ambient"></div>
 
-  <script src="app.js" defer></script>
-</body>
+    <template id="forecast-cell">
+      <td class="data-cell">
+        <div class="cell-stack">
+          <span class="cell-main"></span>
+          <span class="cell-sub"></span>
+        </div>
+      </td>
+    </template>
+
+    <script src="app.js" defer></script>
+  </body>
 </html>
