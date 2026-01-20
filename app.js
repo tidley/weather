@@ -29,27 +29,24 @@ const config = {
 
 const ui = {
   locationName: document.getElementById('location-name'),
-  weatherUpdated: document.getElementById('weather-updated'),
-  tidesUpdated: document.getElementById('tides-updated'),
-  currentSummary: document.getElementById('current-summary'),
   currentTemp: document.getElementById('current-temp'),
   currentWind: document.getElementById('current-wind'),
-  currentWindDir: document.getElementById('current-wind-dir'),
-  currentWindArrow: document.getElementById('current-wind-arrow'),
-  currentGusts: document.getElementById('current-gusts'),
-  currentDirection: document.getElementById('current-direction'),
-  currentGustFactor: document.getElementById('current-gust-factor'),
-  currentWaves: document.getElementById('current-waves'),
-  currentWavePeriod: document.getElementById('current-wave-period'),
-  currentPrecip: document.getElementById('current-precip'),
-  currentRainProb: document.getElementById('current-rain-prob'),
-  currentCloud: document.getElementById('current-cloud'),
-  currentCloudIcon: document.getElementById('current-cloud-icon'),
-  currentSkySummary: document.getElementById('current-sky-summary'),
-  currentMoon: document.getElementById('current-moon'),
-  currentMoonIcon: document.getElementById('current-moon-icon'),
-  currentTide: document.getElementById('current-tide'),
-  currentScore: document.getElementById('current-score'),
+  summaryBand: document.getElementById('decision-band'),
+  summaryLabel: document.getElementById('decision-label'),
+  summaryReason: document.getElementById('decision-reason'),
+  summaryKi: document.getElementById('decision-ki'),
+  summaryUpdated: document.getElementById('summary-updated'),
+  summaryWind: document.getElementById('summary-wind'),
+  summaryGusts: document.getElementById('summary-gusts'),
+  summaryGustFactor: document.getElementById('summary-gust-factor'),
+  summaryDirection: document.getElementById('summary-direction'),
+  summaryDirectionIcon: document.getElementById('summary-direction-icon'),
+  summaryTemp: document.getElementById('summary-temp'),
+  summaryWaves: document.getElementById('summary-waves'),
+  summaryTide: document.getElementById('summary-tide'),
+  summaryRain: document.getElementById('summary-rain'),
+  summaryDaylight: document.getElementById('summary-daylight'),
+  summaryChips: document.getElementById('summary-chips'),
   forecastGrid: document.getElementById('forecast-grid'),
   forecastHeadRow: document.getElementById('forecast-head-row'),
   forecastBody: document.getElementById('forecast-body'),
@@ -75,6 +72,11 @@ const formatWindow = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit',
   month: 'short',
   hour: '2-digit',
+});
+
+const formatUpdatedTime = new Intl.DateTimeFormat('en-GB', {
+  hour: '2-digit',
+  minute: '2-digit',
 });
 
 const formatHeaderDay = new Intl.DateTimeFormat('en-GB', {
@@ -197,17 +199,18 @@ if (shouldEnableTapTooltips()) {
   window.addEventListener('resize', hideTapTooltip);
 }
 
-function setUpdatedLabel(target, label, isoTime) {
-  if (!target) return;
-  if (!isoTime) {
-    target.textContent = `${label}: —`;
-    return;
-  }
+function formatUpdatedValue(isoTime) {
+  if (!isoTime) return '—';
   const date = new Date(isoTime);
-  target.textContent = `${label}: ${date.toLocaleString('en-GB', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })}`;
+  if (Number.isNaN(date.getTime())) return '—';
+  return formatUpdatedTime.format(date);
+}
+
+function setSummaryUpdated(weatherIso, tidesIso) {
+  if (!ui.summaryUpdated) return;
+  const weatherText = formatUpdatedValue(weatherIso);
+  const tidesText = formatUpdatedValue(tidesIso);
+  ui.summaryUpdated.textContent = `Weather ${weatherText} · Tides ${tidesText}`;
 }
 
 function setLocation() {
@@ -512,45 +515,58 @@ function clearTideStatus() {
 }
 
 function renderCurrent(data) {
-  const current = data.current;
-  ui.currentTemp.textContent = formatValue(current.temperature_2m, '°C');
-  ui.currentWind.textContent = formatValue(current.wind_speed_10m, ' kt');
-  ui.currentWindDir.textContent = `${windCompass(current.wind_direction_10m)}`;
-  if (ui.currentWindArrow) {
-    ui.currentWindArrow.style.transform = arrowForDegrees(
-      current.wind_direction_10m,
-    );
-  }
-  ui.currentGusts.textContent = formatValue(current.wind_gusts_10m, ' kt');
-  ui.currentPrecip.textContent = formatValue(current.precipitation, ' mm');
-  if (ui.currentCloud) {
-    ui.currentCloud.textContent = formatValue(current.cloud_cover, '% cloud');
-  }
-  if (ui.currentDirection) {
-    ui.currentDirection.textContent = windCompass(current.wind_direction_10m);
-  }
-  if (ui.currentCloudIcon) {
-    const currentTime = current.time ? new Date(current.time) : new Date();
-    const icon = skyIcon(current.cloud_cover, currentTime);
-    renderMeteoconsIcon(ui.currentCloudIcon, icon);
-    ui.currentCloudIcon.style.color =
-      current.cloud_cover < 20 ? '#ffd54a' : '#dbe7ff';
-  }
-  if (ui.currentSkySummary) {
-    ui.currentSkySummary.textContent = `${Math.round(
-      current.cloud_cover ?? 0,
-    )}%`;
-  }
-
-  const wind = Math.round(current.wind_speed_10m);
-  const gusts = Math.round(current.wind_gusts_10m);
-  const rain = Math.round(current.precipitation || 0);
-  if (ui.currentSummary) {
-    ui.currentSummary.textContent = `${wind} kt / ${gusts} kt · ${rain} mm`;
-  }
+  if (!data?.current) return;
 }
 
-function renderCurrentFromForecast(data, tideSeries, column, score) {
+function kiVerdict(kiPct) {
+  if (kiPct >= 65) return 'GOOD';
+  if (kiPct >= 45) return 'MARGINAL';
+  return 'POOR';
+}
+
+function kiReason({
+  gustFactor,
+  windKt,
+  rainMm,
+  wavesM,
+  wavePeriodS,
+}) {
+  if (Number.isFinite(gustFactor) && gustFactor >= 2.0) return 'Gusty';
+  if (Number.isFinite(windKt) && windKt < 12) return 'Light wind';
+  if (Number.isFinite(rainMm) && rainMm >= 1) return 'Rain';
+  if (
+    Number.isFinite(wavesM) &&
+    Number.isFinite(wavePeriodS) &&
+    wavesM >= 2 &&
+    wavePeriodS < 7
+  )
+    return 'Choppy waves';
+  return 'Conditions look workable';
+}
+
+function formatOrDash(value, unit, digits = 0) {
+  if (!Number.isFinite(value)) return '—';
+  const fixed = digits === 0 ? Math.round(value) : value.toFixed(digits);
+  return unit ? `${fixed} ${unit}` : `${fixed}`;
+}
+
+function directionIcon(sdScore) {
+  if (!Number.isFinite(sdScore)) return '';
+  if (sdScore >= 0.75) return '✓';
+  if (sdScore >= 0.5) return '⚠';
+  return '✗';
+}
+
+function tideLabel(tideLevel, tideRange) {
+  if (!tideLevel || !tideRange || tideRange.max <= tideRange.min) return null;
+  const tNorm =
+    (tideLevel.height - tideRange.min) / (tideRange.max - tideRange.min);
+  if (tNorm <= 0.33) return 'Low';
+  if (tNorm <= 0.66) return 'Mid';
+  return 'High';
+}
+
+function renderSummary(data, tideSeries, column, score, tideRange) {
   if (!column || !data?.hourly) return;
   const idx = column.index;
   const wind = data.hourly.wind_speed_10m?.[idx];
@@ -558,105 +574,117 @@ function renderCurrentFromForecast(data, tideSeries, column, score) {
   const gustFactor = wind ? gusts / wind : null;
   const waveHeight = data.hourly.wave_height?.[idx];
   const wavePeriod = data.hourly.wave_period?.[idx];
+  const temp = data.hourly.temperature_2m?.[idx];
   const rainProb = data.hourly.precipitation_probability?.[idx];
+  const rainMm = data.hourly.precipitation?.[idx];
   const cloud = data.hourly.cloud_cover?.[idx];
-  const moon = lunarPhaseInfo(column.time);
   const tideLevel = tideLevelAt(tideSeries, column.time);
+  const kiPct = Math.round(score.ki * 100);
+  const verdict = kiVerdict(kiPct);
+  const reason = kiReason({
+    gustFactor,
+    windKt: wind,
+    rainMm,
+    wavesM: waveHeight,
+    wavePeriodS: wavePeriod,
+  });
 
-  if (ui.currentWind) {
-    ui.currentWind.textContent = formatValue(wind, ' kt');
+  if (ui.summaryBand) ui.summaryBand.dataset.verdict = verdict;
+  if (ui.summaryLabel) ui.summaryLabel.textContent = verdict;
+  if (ui.summaryReason) ui.summaryReason.textContent = reason;
+  if (ui.summaryKi) ui.summaryKi.textContent = `${kiPct}%`;
+
+  if (ui.summaryWind) {
+    ui.summaryWind.textContent = formatOrDash(wind, 'kt');
   }
-  if (ui.currentGusts) {
-    ui.currentGusts.textContent = formatValue(gusts, ' kt');
+  if (ui.summaryGusts) {
+    ui.summaryGusts.textContent = Number.isFinite(gusts)
+      ? Math.round(gusts)
+      : '—';
   }
-  if (ui.currentWindDir) {
-    ui.currentWindDir.textContent = windCompass(
+  if (ui.summaryGustFactor) {
+    ui.summaryGustFactor.textContent = Number.isFinite(gustFactor)
+      ? `×${gustFactor.toFixed(1)}`
+      : '';
+  }
+  if (ui.summaryDirection) {
+    ui.summaryDirection.textContent = windCompass(
       data.hourly.wind_direction_10m?.[idx],
     );
   }
-  if (ui.currentWindArrow) {
-    ui.currentWindArrow.style.transform = arrowForDegrees(
-      data.hourly.wind_direction_10m?.[idx],
-    );
+  if (ui.summaryDirectionIcon) {
+    ui.summaryDirectionIcon.textContent = directionIcon(score.scores?.sd);
   }
-  if (ui.currentDirection) {
-    ui.currentDirection.textContent = windCompass(
-      data.hourly.wind_direction_10m?.[idx],
-    );
+  if (ui.summaryTemp) {
+    ui.summaryTemp.textContent = formatOrDash(temp, '°C');
   }
-  if (ui.currentPrecip) {
-    const precip = data.hourly.precipitation?.[idx];
-    ui.currentPrecip.textContent = formatValue(precip, ' mm');
-  }
-  if (ui.currentGustFactor) {
-    ui.currentGustFactor.textContent = Number.isFinite(gustFactor)
-      ? gustFactor.toFixed(1)
+
+  if (ui.summaryWaves) {
+    const wavesText = Number.isFinite(waveHeight)
+      ? `${waveHeight.toFixed(1)} m`
       : '—';
+    const periodText = Number.isFinite(wavePeriod)
+      ? ` @ ${wavePeriod.toFixed(1)} s`
+      : '';
+    ui.summaryWaves.textContent = `Waves ${wavesText}${periodText}`;
   }
-  if (ui.currentWaves) {
-    ui.currentWaves.textContent = Number.isFinite(waveHeight)
-      ? `${waveHeight.toFixed(1).replace(/\\.0$/, '')} m`
-      : '—';
+  if (ui.summaryTide) {
+    const semantic = tideLabel(tideLevel, tideRange);
+    const tideText = semantic
+      ? `Tide ${semantic}`
+      : `Tide ${formatOrDash(tideLevel?.height, 'm', 1)}`;
+    ui.summaryTide.textContent = tideText;
   }
-  if (ui.currentWavePeriod) {
-    ui.currentWavePeriod.textContent = Number.isFinite(wavePeriod)
-      ? `${wavePeriod.toFixed(1).replace(/\\.0$/, '')} s`
-      : '—';
+  if (ui.summaryRain) {
+    const rainText = Number.isFinite(rainMm)
+      ? `Rain ${rainMm.toFixed(1).replace(/\.0$/, '')} mm`
+      : 'Rain —';
+    ui.summaryRain.textContent = rainText;
+    ui.summaryRain.classList.toggle('muted', Number(rainMm) === 0);
   }
-  if (ui.currentRainProb) {
-    ui.currentRainProb.textContent = Number.isFinite(rainProb)
-      ? `${Math.round(rainProb)}%`
-      : '—';
+  if (ui.summaryDaylight) {
+    ui.summaryDaylight.textContent = column.isDaylight ? 'Daylight Day' : 'Daylight Night';
   }
-  if (ui.currentCloud) {
-    ui.currentCloud.textContent = Number.isFinite(cloud)
-      ? `${Math.round(cloud)}%`
-      : '—';
-  }
-  if (ui.currentSkySummary) {
-    ui.currentSkySummary.textContent = Number.isFinite(cloud)
-      ? `${Math.round(cloud)}%`
-      : '—';
-  }
-  if (ui.currentCloudIcon) {
-    const icon = skyIcon(cloud, column.time);
-    renderMeteoconsIcon(ui.currentCloudIcon, icon);
-    ui.currentCloudIcon.style.color = cloud < 20 ? '#ffd54a' : '#dbe7ff';
-  }
-  if (ui.currentMoon) {
-    ui.currentMoon.textContent = '';
-  }
-  if (ui.currentMoonIcon) {
-    ui.currentMoonIcon.innerHTML = '';
-  }
-  if (ui.currentTide) {
-    ui.currentTide.textContent = '';
-  }
-  if (ui.currentScore && score) {
-    ui.currentScore.title = formatKiTooltip(score, {
-      windSpeed: wind,
-      windDirDegrees: data.hourly.wind_direction_10m?.[idx],
-      tideHeight: tideLevel?.height ?? null,
-      tideMin: tideSeries?.length
-        ? Math.min(
-            ...tideSeries
-              .map((event) => parseHeightNumber(event.height))
-              .filter((value) => value !== null),
-          )
-        : null,
-      tideMax: tideSeries?.length
-        ? Math.max(
-            ...tideSeries
-              .map((event) => parseHeightNumber(event.height))
-              .filter((value) => value !== null),
-          )
-        : null,
-      isDaylightNow: isDaylight(
-        column.time,
-        config.latitude,
-        config.longitude,
-      ),
-    });
+
+  if (ui.summaryChips) {
+    ui.summaryChips.innerHTML = '';
+    ui.summaryChips.style.display = 'none';
+    const penalties = [];
+    const boosts = [];
+    if (Number.isFinite(gustFactor) && gustFactor >= 2.0) penalties.push('Gusty');
+    if (Number.isFinite(wind) && wind < 12) penalties.push('Light wind');
+    if (Number.isFinite(rainMm) && rainMm >= 1) penalties.push('Rain');
+    if (
+      Number.isFinite(waveHeight) &&
+      Number.isFinite(wavePeriod) &&
+      waveHeight >= 1.5 &&
+      wavePeriod <= 6
+    )
+      penalties.push('Choppy');
+    if (score.scores?.sd >= 0.75) boosts.push('Good direction');
+    if (column.isDaylight) boosts.push('Daylight');
+    if (
+      Number.isFinite(waveHeight) &&
+      Number.isFinite(wavePeriod) &&
+      waveHeight >= 0.8 &&
+      waveHeight <= 1.8 &&
+      wavePeriod >= 7
+    )
+      boosts.push('Clean waves');
+
+    const chips = [
+      ...penalties.slice(0, 3).map((text) => ({ text, kind: 'penalty' })),
+      ...boosts.slice(0, 3).map((text) => ({ text, kind: 'boost' })),
+    ];
+    if (chips.length) {
+      ui.summaryChips.style.display = 'flex';
+      chips.slice(0, 3).forEach((chip) => {
+        const span = document.createElement('span');
+        span.className = `reason-chip ${chip.kind}`;
+        span.textContent = chip.text;
+        ui.summaryChips.appendChild(span);
+      });
+    }
   }
 }
 
@@ -1995,31 +2023,17 @@ function renderForecast(data, tideEvents) {
     ui.forecastRange.textContent = 'No forecast windows';
   }
 
-  if (ui.currentScore && columns.length) {
+  if (columns.length) {
     const now = new Date();
     const nowIndex = columns.findIndex((column) => column.time >= now);
     const columnIndex = nowIndex >= 0 ? nowIndex : 0;
     const score = columnScores[columnIndex];
-    ui.currentScore.textContent = `${Math.round(score.ki * 100)}%`;
-    ui.currentScore.style.color = score.stars ? '#f7c948' : '#9bb2c8';
-    const tideLevel = tideLevelAt(tideSeries, columns[columnIndex].time);
-    ui.currentScore.title = formatKiTooltip(score, {
-      windSpeed: data.hourly.wind_speed_10m[columns[columnIndex].index],
-      windDirDegrees: data.hourly.wind_direction_10m[columns[columnIndex].index],
-      tideHeight: tideLevel?.height ?? null,
-      tideMin: tideRange?.min ?? null,
-      tideMax: tideRange?.max ?? null,
-      isDaylightNow: isDaylight(
-        columns[columnIndex].time,
-        config.latitude,
-        config.longitude,
-      ),
-    });
-    renderCurrentFromForecast(
+    renderSummary(
       data,
       tideSeries,
       columns[columnIndex],
       score,
+      tideRange,
     );
   }
 
@@ -2110,15 +2124,9 @@ function renderFromCache() {
   }
 
   const mergedWeather = mergeWaveData(cached.weather, cached.waves);
-  renderCurrent(mergedWeather);
   renderForecast(mergedWeather, cached.tides);
   setTideStatus('');
-  setUpdatedLabel(
-    ui.weatherUpdated,
-    'Weather updated',
-    cached.weatherUpdatedAt,
-  );
-  setUpdatedLabel(ui.tidesUpdated, 'Tides updated', cached.tidesUpdatedAt);
+  setSummaryUpdated(cached.weatherUpdatedAt, cached.tidesUpdatedAt);
 
   if (!cached.tides || !cached.tides.length) {
     loadTides({ force: false })
@@ -2154,11 +2162,7 @@ function renderFromCache() {
 }
 
 function handleError(error) {
-  if (ui.currentSummary) {
-    ui.currentSummary.textContent = 'Offline';
-  }
-  setUpdatedLabel(ui.weatherUpdated, 'Weather updated', null);
-  setUpdatedLabel(ui.tidesUpdated, 'Tides updated', null);
+  setSummaryUpdated(null, null);
   console.error(error);
 }
 
@@ -2184,11 +2188,9 @@ async function loadForecast(options = {}) {
     const wavesUpdatedAt = wavesRes?.updatedAt || null;
     const mergedWeather = mergeWaveData(data, wavesData);
 
-    renderCurrent(mergedWeather);
     renderForecast(mergedWeather, tideItems);
     setTideStatus('');
-    setUpdatedLabel(ui.weatherUpdated, 'Weather updated', weatherUpdatedAt);
-    setUpdatedLabel(ui.tidesUpdated, 'Tides updated', tidesUpdatedAt);
+    setSummaryUpdated(weatherUpdatedAt, tidesUpdatedAt);
     saveCache(data, tideItems, weatherUpdatedAt, tidesUpdatedAt);
     if (wavesData) {
       saveWavesCache(wavesData, wavesUpdatedAt);

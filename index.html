@@ -12,57 +12,49 @@
       <div>
         <p class="eyebrow">Kitesurfing Forecast</p>
         <h1 id="location-name">Loading…</h1>
-        <p class="meta" id="weather-updated">Weather updated: —</p>
-        <p class="meta" id="tides-updated">Tides updated: —</p>
       </div>
     </header>
 
-    <section class="current-wrap" aria-live="polite">
-      <article class="card current" id="current-card">
-        <div class="current-stats">
-          <div>
-            <p class="label">Air temp</p>
-            <p class="value" id="current-temp">—</p>
-          </div>
-          <div>
-            <p class="label label-with-icon">
-              <span class="meteocons-icon label-icon" data-meteocons="wind-fill" aria-hidden="true"></span>
-              Wind
-            </p>
-            <p class="value" id="current-wind">—</p>
-            <p class="subvalue wind-summary">
-              <span class="arrow summary-arrow" id="current-wind-arrow" aria-hidden="true"></span>
-              <span id="current-wind-dir">—</span>
-            </p>
-          </div>
-          <div>
-            <p class="label">Direction</p>
-            <p class="value" id="current-direction">—</p>
-          </div>
-          <div>
-            <p class="label">Gusts</p>
-            <p class="value" id="current-gusts">—</p>
-          </div>
-          <div>
-            <p class="label">Gust factor</p>
-            <p class="value" id="current-gust-factor">—</p>
-          </div>
-          <div>
-            <p class="label">Waves</p>
-            <p class="value" id="current-waves">—</p>
-            <p class="subvalue" id="current-wave-period">—</p>
-          </div>
-          <div>
-            <p class="label">Rain</p>
-            <p class="value" id="current-precip">—</p>
-            <p class="subvalue" id="current-rain-prob">—</p>
-          </div>
-          <div>
-            <p class="label">Score</p>
-            <p class="value score-value" id="current-score">—</p>
-          </div>
+    <section class="summary-bar" aria-live="polite">
+      <div class="decision-band" id="decision-band">
+        <div class="decision-left">
+          <p class="decision-label" id="decision-label">—</p>
+          <p class="decision-reason" id="decision-reason">—</p>
         </div>
-      </article>
+        <div class="decision-ki" id="decision-ki">—</div>
+      </div>
+      <p class="summary-updated" id="summary-updated">Weather — · Tides —</p>
+      <div class="primary-row">
+        <div class="summary-card">
+          <p class="summary-label">WIND</p>
+          <p class="summary-value" id="summary-wind">— kt</p>
+        </div>
+        <div class="summary-card">
+          <p class="summary-label">GUSTS</p>
+          <p class="summary-value">
+            <span id="summary-gusts">—</span> kt
+            <span class="summary-badge" id="summary-gust-factor"></span>
+          </p>
+        </div>
+        <div class="summary-card">
+          <p class="summary-label">DIRECTION</p>
+          <p class="summary-value">
+            <span id="summary-direction">—</span>
+            <span class="summary-icon" id="summary-direction-icon"></span>
+          </p>
+        </div>
+        <div class="summary-card">
+          <p class="summary-label">AIR TEMP</p>
+          <p class="summary-value" id="summary-temp">— °C</p>
+        </div>
+      </div>
+      <div class="modifiers-row">
+        <div class="summary-chip" id="summary-waves">Waves —</div>
+        <div class="summary-chip" id="summary-tide">Tide —</div>
+        <div class="summary-chip" id="summary-rain">Rain —</div>
+        <div class="summary-chip" id="summary-daylight">Daylight —</div>
+      </div>
+      <div class="chips-row" id="summary-chips"></div>
     </section>
 
     <section class="card forecast" id="forecast-card">
