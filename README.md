@@ -2,6 +2,17 @@
 
 Simple, single-location weather dashboard aimed at quick kitesurfing checks. It uses Open-Meteo for weather + marine (waves) and UKHO for tides, with local caching.
 
+## What’s included
+
+- Open-Meteo weather + marine (waves) integration with server-side caching.
+- Tide feed via UKHO, cached locally with coverage extension.
+- Kiteability Index (KI) displayed as 0–100% with detailed hover breakdown.
+- Dense, Windguru-style forecast table:
+  - Separate rows for wind, gusts, gust factor, direction, waves, rain, sky, moon, tide, and tide curve.
+  - Date row uses alternating day stripes; Time row uses time-of-day shading.
+  - Optional “Hide night” toggle to filter night columns.
+- Compact summary tile at the top with overall verdict, wind/gusts/direction/temp, waves/tide/rain, and reason chips.
+
 ## Run it (recommended)
 
 Serve the folder with PHP so the proxy endpoints work:
@@ -18,16 +29,6 @@ The PHP endpoints are:
 - `tides.php` → UKHO tidal events (cached in `tides-cache.json`)
 
 LocalStorage is also used for front-end caching.
-
-## Alternate server
-
-There is a simple Node server in `server.js` for static hosting and a `/tides` proxy. If you use it, update `config.tide.apiUrl` to `/tides` and either:
-- change `config.weather.apiUrl` / `config.waves.apiUrl` to the Open-Meteo upstream URLs, or
-- add equivalent Node proxies for them.
-
-```bash
-node server.js
-```
 
 ## Configure location
 
