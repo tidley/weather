@@ -299,7 +299,7 @@ h2 {
 
 .forecast-grid th,
 .forecast-grid td {
-  padding: 4px 3px;
+  padding: 3px 2px;
   border-bottom: 1px solid rgba(231, 242, 255, 0.08);
   text-align: center;
   white-space: nowrap;
@@ -342,7 +342,7 @@ h2 {
 }
 
 .data-cell {
-  min-width: 46px;
+  min-width: 40px;
   border-left: 1px solid rgba(231, 242, 255, 0.04);
 }
 
@@ -466,8 +466,8 @@ h2 {
 }
 
 .wind-direction-cell .arrow {
-  width: 33px;
-  height: 33px;
+  width: 30px;
+  height: 30px;
   color: var(--accent);
 }
 
@@ -488,12 +488,12 @@ h2 {
   color: var(--muted);
 }
 
-.temperature-cell .cell-main {
+.forecast-grid tbody .cell-main {
   font-size: 0.88rem;
   font-weight: 600;
 }
 
-.temperature-cell .cell-sub {
+.forecast-grid tbody .cell-sub {
   font-size: 0.72rem;
 }
 
