@@ -1,66 +1,55 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Forecast</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main class="app">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">Kitesurfing Forecast</p>
-          <h1 id="location-name">Loading…</h1>
-        </div>
-      </header>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Forecast</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Kitesurfing Forecast</p>
+        <h1 id="location-name">Loading…</h1>
+      </div>
+      <p class="summary-updated topbar-updated" id="summary-updated">Weather — · Tides —</p>
+    </header>
 
-      <section class="summary-bar" aria-live="polite">
-        <div class="summary-tile" id="decision-band">
-          <!-- <div class="summary-item summary-overall-line">
-            <span class="summary-title">OVERALL</span>
-            <span id="summary-overall">—</span>
-          </div> -->
-          <p class="summary-updated" id="summary-updated">
-            Weather — · Tides —
-          </p>
-          <div class="summary-grid">
-            <div class="summary-item summary-overall-line">
-              <span class="summary-title">OVERALL</span>
-              <span id="summary-overall">—</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-title">WIND</span>
-              <span id="summary-wind">— kt</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-title">GUSTS</span>
-              <span><span id="summary-gusts">—</span> kt</span>
-              <span class="summary-badge" id="summary-gust-factor"></span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-title">DIRECTION</span>
-              <span
-                ><span id="summary-direction">—</span>
-                <span class="summary-icon" id="summary-direction-icon"></span
-              ></span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-title">AIR TEMP</span>
-              <span id="summary-temp">— °C</span>
-            </div>
-            <div class="summary-item" id="summary-waves">
-              <span class="summary-title">WAVES</span>
-              <span>—</span>
-            </div>
-            <div class="summary-item" id="summary-tide">
-              <span class="summary-title">TIDE</span>
-              <span>—</span>
-            </div>
-            <div class="summary-item" id="summary-rain">
-              <span class="summary-title">RAIN</span>
-              <span>—</span>
-            </div>
+    <section class="summary-bar" aria-live="polite">
+      <div class="summary-tile" id="decision-band">
+        <div class="summary-item summary-overall-line">
+          <span class="summary-title">OVERALL</span>
+          <span id="summary-overall">—</span>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="summary-title">WIND</span>
+            <span id="summary-wind">— kt</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-title">GUSTS</span>
+            <span><span id="summary-gusts">—</span> kt</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-title">DIRECTION</span>
+            <span><span id="summary-direction">—</span> <span class="summary-icon" id="summary-direction-icon"></span></span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-title">AIR TEMP</span>
+            <span id="summary-temp">— °C</span>
+          </div>
+          <div class="summary-item" id="summary-waves">
+            <span class="summary-title">WAVES</span>
+            <span>—</span>
+          </div>
+          <div class="summary-item" id="summary-tide">
+            <span class="summary-title">TIDE</span>
+            <span>—</span>
+          </div>
+          <div class="summary-item" id="summary-rain">
+            <span class="summary-title">RAIN</span>
+            <span>—</span>
           </div>
           <div class="chips-row" id="summary-chips"></div>
         </div>
