@@ -445,14 +445,22 @@ h2 {
 .wind-direction-cell .wind-cell {
   flex-direction: column;
   gap: 2px;
-  min-height: 46px;
-  padding-top: 2px;
-  padding-bottom: 2px;
+  min-height: 52px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  justify-content: space-between;
 }
 
 .wind-direction-cell .arrow {
-  width: 20px;
-  height: 3px;
+  width: 22px;
+  height: 12px;
+}
+
+.wind-direction-cell .arrow::before,
+.wind-direction-cell .arrow::after {
+  width: 12px;
+  height: 2px;
+  top: 5px;
 }
 
 .wind-cell .arrow {
@@ -574,22 +582,34 @@ h2 {
 .arrow {
   display: inline-block;
   width: 18px;
-  height: 3px;
-  background: var(--accent);
-  border-radius: 2px;
+  height: 12px;
   position: relative;
   transform: rotate(0deg);
   transition: transform 0.2s ease;
   transform-origin: center center;
 }
 
+.arrow::before,
 .arrow::after {
   content: "";
   position: absolute;
-  right: -6px;
-  top: -5px;
-  border: 6px solid transparent;
-  border-left-color: var(--accent);
+  top: 5px;
+  width: 10px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.arrow::before {
+  left: 0;
+  transform: rotate(45deg);
+  transform-origin: left center;
+}
+
+.arrow::after {
+  right: 0;
+  transform: rotate(-45deg);
+  transform-origin: right center;
 }
 
 .forecast-gusts,
