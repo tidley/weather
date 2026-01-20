@@ -333,7 +333,7 @@ function lerpColor(start, end, t) {
 function timeGradient(time) {
   const dayStart = new Date(time.getFullYear(), time.getMonth(), time.getDate());
   const dayIndex = Math.floor(dayStart.getTime() / 86400000);
-  return dayIndex % 2 === 0 ? '#1c4890' : '#122f5d';
+  return dayIndex % 2 === 0 ? '#06101c' : '#163a5a';
 }
 
 function toRad(degrees) {
