@@ -36,7 +36,6 @@ const ui = {
   summaryUpdated: document.getElementById('summary-updated'),
   summaryWind: document.getElementById('summary-wind'),
   summaryGusts: document.getElementById('summary-gusts'),
-  summaryGustFactor: document.getElementById('summary-gust-factor'),
   summaryDirection: document.getElementById('summary-direction'),
   summaryDirectionIcon: document.getElementById('summary-direction-icon'),
   summaryTemp: document.getElementById('summary-temp'),
@@ -607,11 +606,6 @@ function renderSummary(data, tideSeries, column, score, tideRange) {
     ui.summaryGusts.textContent = Number.isFinite(gusts)
       ? Math.round(gusts)
       : '—';
-  }
-  if (ui.summaryGustFactor) {
-    ui.summaryGustFactor.textContent = Number.isFinite(gustFactor)
-      ? `×${gustFactor.toFixed(1)}`
-      : '';
   }
   if (ui.summaryDirection) {
     ui.summaryDirection.textContent = windCompass(
