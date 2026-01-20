@@ -223,6 +223,25 @@ h2 {
   opacity: 1;
 }
 
+.forecast-controls {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 2px 8px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.toggle input {
+  accent-color: var(--accent);
+}
+
 .forecast-meta {
   display: flex;
   align-items: center;
@@ -275,12 +294,12 @@ h2 {
 .forecast-grid {
   border-collapse: collapse;
   width: max-content;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
 }
 
 .forecast-grid th,
 .forecast-grid td {
-  padding: 7px 3px;
+  padding: 4px 3px;
   border-bottom: 1px solid rgba(231, 242, 255, 0.08);
   text-align: center;
   white-space: nowrap;
@@ -293,9 +312,10 @@ h2 {
 }
 
 .forecast-grid thead .cell-line {
-  font-size: 0.72rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--ink);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
 .label-cell {
@@ -306,23 +326,28 @@ h2 {
   color: var(--muted);
   font-weight: 600;
   z-index: 2;
-  min-width: 104px;
-  max-width: 104px;
+  min-width: 88px;
+  max-width: 88px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
 /* When the user scrolls horizontally (common on mobile), reclaim space by
    narrowing the sticky title column without changing its text. */
 .forecast-scrolled .label-cell {
-  min-width: 84px;
-  max-width: 84px;
+  min-width: 72px;
+  max-width: 72px;
 }
 
 .data-cell {
-  min-width: 54px;
+  min-width: 46px;
   border-left: 1px solid rgba(231, 242, 255, 0.04);
+}
+
+.hide-night .night-col {
+  display: none;
 }
 
 .wind-power-cell {
@@ -333,7 +358,7 @@ h2 {
 
 .cell-stack {
   display: grid;
-  gap: 2px;
+  gap: 1px;
   justify-items: center;
 }
 
@@ -344,20 +369,20 @@ h2 {
 
   .forecast-grid th,
   .forecast-grid td {
-    padding: 4px 6px;
+    padding: 3px 4px;
   }
 
   .label-cell {
-    min-width: 64px;
-    max-width: 64px;
-    font-size: 0.75rem;
-    padding-left: 10px;
-    padding-right: 6px;
+    min-width: 58px;
+    max-width: 58px;
+    font-size: 0.72rem;
+    padding-left: 8px;
+    padding-right: 4px;
   }
 
   .forecast-scrolled .label-cell {
-    min-width: 48px;
-    max-width: 48px;
+    min-width: 46px;
+    max-width: 46px;
   }
 
   .cell-stack {
@@ -393,13 +418,13 @@ h2 {
 .cell-main {
   font-weight: 600;
   color: var(--ink);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
 .cell-sub {
   color: var(--muted);
-  font-size: 0.72rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  font-size: 0.74rem;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
 .meteocons-icon {
@@ -435,7 +460,7 @@ h2 {
   flex-direction: column;
   gap: 2px;
   min-height: 52px;
-  padding-top: 4px;
+  padding-top: 2px;
   padding-bottom: 4px;
   justify-content: space-between;
 }
@@ -461,6 +486,31 @@ h2 {
 
 .wind-direction-cell .cell-sub {
   color: var(--muted);
+}
+
+.temperature-cell .cell-main {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.temperature-cell .cell-sub {
+  font-size: 0.72rem;
+}
+
+.ki-cell .cell-main {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.ki-cell .cell-sub {
+  font-size: 0.74rem;
+}
+
+.wave-cell .cell-sub,
+.precipitation-cell .cell-sub,
+.sky-cell .cell-sub,
+.moon-cell .cell-sub {
+  font-size: 0.8rem;
 }
 
 .ki-cell .cell-main,
