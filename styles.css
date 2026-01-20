@@ -276,6 +276,19 @@ h2 {
   border: 1px solid rgba(231, 242, 255, 0.08);
 }
 
+.summary-card,
+.summary-overall {
+  min-height: 80px;
+  max-height: 80px;
+}
+
+.summary-overall .decision-reason {
+  font-size: 0.82rem;
+  line-height: 1.2;
+  max-height: 2.4em;
+  overflow: hidden;
+}
+
 .summary-label {
   margin: 0 0 6px;
   font-size: 0.7rem;
