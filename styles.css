@@ -459,9 +459,9 @@ h2 {
 .wind-direction-cell .wind-cell {
   flex-direction: column;
   gap: 2px;
-  min-height: 52px;
-  padding-top: 2px;
-  padding-bottom: 4px;
+  min-height: 44px;
+  padding-top: 1px;
+  padding-bottom: 2px;
   justify-content: space-between;
 }
 
@@ -605,6 +605,7 @@ h2 {
   transform: rotate(0deg);
   transition: transform 0.2s ease;
   transform-origin: center center;
+  transform-box: fill-box;
   display: inline-block;
 }
 
