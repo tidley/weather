@@ -587,6 +587,16 @@ function renderSummary(data, tideSeries, column, score, tideRange) {
   });
 
   if (ui.summaryBand) ui.summaryBand.dataset.verdict = verdict;
+  if (ui.summaryBand) {
+    ui.summaryBand.title = formatKiTooltip(score, {
+      windSpeed: wind,
+      windDirDegrees: data.hourly.wind_direction_10m?.[idx],
+      tideHeight: tideLevel?.height ?? null,
+      tideMin: tideRange?.min ?? null,
+      tideMax: tideRange?.max ?? null,
+      isDaylightNow: column.isDaylight,
+    });
+  }
   if (ui.summaryOverall)
     ui.summaryOverall.textContent = `${verdict} ${kiPct}%`;
 
