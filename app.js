@@ -624,7 +624,7 @@ function renderSummary(data, tideSeries, column, score, tideRange) {
       ? `${waveHeight.toFixed(1)} m`
       : '—';
     const periodText = Number.isFinite(wavePeriod)
-      ? ` @ ${wavePeriod.toFixed(1)} s`
+      ? ` ${wavePeriod.toFixed(1)} s`
       : '';
     const target = ui.summaryWaves.querySelector('span:last-child');
     if (target) target.textContent = `${wavesText}${periodText}`;
