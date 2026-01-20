@@ -881,7 +881,7 @@ function kiteIndex({
 
   const windValue = Number.isFinite(windSpeed) ? windSpeed : 0;
   const sw =
-    windValue <= 18
+    windValue <= 45
       ? windValue < 8
         ? 0
         : 0.1 + (0.9 * clamp(windValue - 8, 0, 10)) / 10
