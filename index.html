@@ -36,16 +36,45 @@
             </p>
           </div>
           <div>
+            <p class="label">Direction</p>
+            <p class="value" id="current-direction">—</p>
+          </div>
+          <div>
             <p class="label">Gusts</p>
             <p class="value" id="current-gusts">—</p>
           </div>
           <div>
-            <p class="label">Precip</p>
+            <p class="label">Gust factor</p>
+            <p class="value" id="current-gust-factor">—</p>
+          </div>
+          <div>
+            <p class="label">Waves</p>
+            <p class="value" id="current-waves">—</p>
+            <p class="subvalue" id="current-wave-period">—</p>
+          </div>
+          <div>
+            <p class="label">Rain</p>
             <p class="value" id="current-precip">—</p>
+            <p class="subvalue" id="current-rain-prob">—</p>
+          </div>
+          <div>
+            <p class="label">Sky</p>
+            <p class="value" id="current-cloud">—</p>
             <p class="subvalue summary-cloud">
               <span class="meteocons-icon" id="current-cloud-icon" data-meteocons="cloudy-fill" aria-hidden="true"></span>
-              <span id="current-cloud">—</span>
+              <span id="current-sky-summary">—</span>
             </p>
+          </div>
+          <div>
+            <p class="label">Moon</p>
+            <p class="value" id="current-moon">—</p>
+            <p class="subvalue">
+              <span class="meteocons-icon" id="current-moon-icon" data-meteocons="moon-full-fill" aria-hidden="true"></span>
+            </p>
+          </div>
+          <div>
+            <p class="label">Tide</p>
+            <p class="value" id="current-tide">—</p>
           </div>
           <div>
             <p class="label">Score</p>
@@ -56,6 +85,12 @@
     </section>
 
     <section class="card forecast" id="forecast-card">
+      <div class="forecast-controls">
+        <label class="toggle">
+          <input type="checkbox" id="toggle-night" />
+          Hide night
+        </label>
+      </div>
       <div class="forecast-scroll">
         <table class="forecast-grid" id="forecast-grid">
           <thead>

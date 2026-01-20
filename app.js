@@ -37,9 +37,18 @@ const ui = {
   currentWindDir: document.getElementById('current-wind-dir'),
   currentWindArrow: document.getElementById('current-wind-arrow'),
   currentGusts: document.getElementById('current-gusts'),
+  currentDirection: document.getElementById('current-direction'),
+  currentGustFactor: document.getElementById('current-gust-factor'),
+  currentWaves: document.getElementById('current-waves'),
+  currentWavePeriod: document.getElementById('current-wave-period'),
   currentPrecip: document.getElementById('current-precip'),
+  currentRainProb: document.getElementById('current-rain-prob'),
   currentCloud: document.getElementById('current-cloud'),
   currentCloudIcon: document.getElementById('current-cloud-icon'),
+  currentSkySummary: document.getElementById('current-sky-summary'),
+  currentMoon: document.getElementById('current-moon'),
+  currentMoonIcon: document.getElementById('current-moon-icon'),
+  currentTide: document.getElementById('current-tide'),
   currentScore: document.getElementById('current-score'),
   forecastGrid: document.getElementById('forecast-grid'),
   forecastHeadRow: document.getElementById('forecast-head-row'),
@@ -49,6 +58,7 @@ const ui = {
   tideSource: document.getElementById('tide-source'),
   tideSvg: document.getElementById('tide-svg'),
   refresh: document.getElementById('refresh'),
+  toggleNight: document.getElementById('toggle-night'),
 };
 
 const cacheKeys = {
@@ -508,6 +518,9 @@ function renderCurrent(data) {
   ui.currentGusts.textContent = formatValue(current.wind_gusts_10m, ' kt');
   ui.currentPrecip.textContent = formatValue(current.precipitation, ' mm');
   ui.currentCloud.textContent = formatValue(current.cloud_cover, '% cloud');
+  if (ui.currentDirection) {
+    ui.currentDirection.textContent = windCompass(current.wind_direction_10m);
+  }
   if (ui.currentCloudIcon) {
     const currentTime = current.time ? new Date(current.time) : new Date();
     const icon = skyIcon(current.cloud_cover, currentTime);
@@ -515,12 +528,129 @@ function renderCurrent(data) {
     ui.currentCloudIcon.style.color =
       current.cloud_cover < 20 ? '#ffd54a' : '#dbe7ff';
   }
+  if (ui.currentSkySummary) {
+    ui.currentSkySummary.textContent = `${Math.round(
+      current.cloud_cover ?? 0,
+    )}%`;
+  }
 
   const wind = Math.round(current.wind_speed_10m);
   const gusts = Math.round(current.wind_gusts_10m);
   const rain = Math.round(current.precipitation || 0);
   if (ui.currentSummary) {
     ui.currentSummary.textContent = `${wind} kt / ${gusts} kt · ${rain} mm`;
+  }
+}
+
+function renderCurrentFromForecast(data, tideSeries, column, score) {
+  if (!column || !data?.hourly) return;
+  const idx = column.index;
+  const wind = data.hourly.wind_speed_10m?.[idx];
+  const gusts = data.hourly.wind_gusts_10m?.[idx];
+  const gustFactor = wind ? gusts / wind : null;
+  const waveHeight = data.hourly.wave_height?.[idx];
+  const wavePeriod = data.hourly.wave_period?.[idx];
+  const rainProb = data.hourly.precipitation_probability?.[idx];
+  const cloud = data.hourly.cloud_cover?.[idx];
+  const moon = lunarPhaseInfo(column.time);
+  const tideLevel = tideLevelAt(tideSeries, column.time);
+
+  if (ui.currentWind) {
+    ui.currentWind.textContent = formatValue(wind, ' kt');
+  }
+  if (ui.currentGusts) {
+    ui.currentGusts.textContent = formatValue(gusts, ' kt');
+  }
+  if (ui.currentWindDir) {
+    ui.currentWindDir.textContent = windCompass(
+      data.hourly.wind_direction_10m?.[idx],
+    );
+  }
+  if (ui.currentWindArrow) {
+    ui.currentWindArrow.style.transform = arrowForDegrees(
+      data.hourly.wind_direction_10m?.[idx],
+    );
+  }
+  if (ui.currentDirection) {
+    ui.currentDirection.textContent = windCompass(
+      data.hourly.wind_direction_10m?.[idx],
+    );
+  }
+  if (ui.currentPrecip) {
+    const precip = data.hourly.precipitation?.[idx];
+    ui.currentPrecip.textContent = formatValue(precip, ' mm');
+  }
+  if (ui.currentGustFactor) {
+    ui.currentGustFactor.textContent = Number.isFinite(gustFactor)
+      ? gustFactor.toFixed(2)
+      : '—';
+  }
+  if (ui.currentWaves) {
+    ui.currentWaves.textContent = Number.isFinite(waveHeight)
+      ? `${waveHeight.toFixed(1).replace(/\\.0$/, '')} m`
+      : '—';
+  }
+  if (ui.currentWavePeriod) {
+    ui.currentWavePeriod.textContent = Number.isFinite(wavePeriod)
+      ? `${wavePeriod.toFixed(1).replace(/\\.0$/, '')} s`
+      : '—';
+  }
+  if (ui.currentRainProb) {
+    ui.currentRainProb.textContent = Number.isFinite(rainProb)
+      ? `${Math.round(rainProb)}%`
+      : '—';
+  }
+  if (ui.currentCloud) {
+    ui.currentCloud.textContent = Number.isFinite(cloud)
+      ? `${Math.round(cloud)}%`
+      : '—';
+  }
+  if (ui.currentSkySummary) {
+    ui.currentSkySummary.textContent = Number.isFinite(cloud)
+      ? `${Math.round(cloud)}%`
+      : '—';
+  }
+  if (ui.currentCloudIcon) {
+    const icon = skyIcon(cloud, column.time);
+    renderMeteoconsIcon(ui.currentCloudIcon, icon);
+    ui.currentCloudIcon.style.color = cloud < 20 ? '#ffd54a' : '#dbe7ff';
+  }
+  if (ui.currentMoon) {
+    ui.currentMoon.textContent = `${Math.round(moon.illumination * 100)}%`;
+  }
+  if (ui.currentMoonIcon) {
+    renderMeteoconsIcon(ui.currentMoonIcon, moon.icon);
+  }
+  if (ui.currentTide) {
+    ui.currentTide.textContent = tideLevel
+      ? `${tideLevel.height.toFixed(2)} m`
+      : '—';
+  }
+  if (ui.currentScore && score) {
+    ui.currentScore.title = formatKiTooltip(score, {
+      windSpeed: wind,
+      windDirDegrees: data.hourly.wind_direction_10m?.[idx],
+      tideHeight: tideLevel?.height ?? null,
+      tideMin: tideSeries?.length
+        ? Math.min(
+            ...tideSeries
+              .map((event) => parseHeightNumber(event.height))
+              .filter((value) => value !== null),
+          )
+        : null,
+      tideMax: tideSeries?.length
+        ? Math.max(
+            ...tideSeries
+              .map((event) => parseHeightNumber(event.height))
+              .filter((value) => value !== null),
+          )
+        : null,
+      isDaylightNow: isDaylight(
+        column.time,
+        config.latitude,
+        config.longitude,
+      ),
+    });
   }
 }
 
@@ -996,9 +1126,12 @@ function kiteIndex({
   };
 }
 
-function buildHeaderCell(time) {
+function buildHeaderCell(time, isDaylightNow) {
   const cell = document.createElement('th');
   cell.className = 'data-cell';
+  if (!isDaylightNow) {
+    cell.classList.add('night-col');
+  }
   cell.style.background = timeGradient(time);
   const wrapper = document.createElement('div');
   wrapper.className = 'cell-stack';
@@ -1412,8 +1545,9 @@ function renderForecast(data, tideEvents) {
   for (let i = startIndex; i < times.length; i += windowSize) {
     const time = times[i];
     if (time > end) break;
-    columns.push({ time, index: i });
-    ui.forecastHeadRow.appendChild(buildHeaderCell(time));
+    const daylight = isDaylight(time, config.latitude, config.longitude);
+    columns.push({ time, index: i, isDaylight: daylight });
+    ui.forecastHeadRow.appendChild(buildHeaderCell(time, daylight));
   }
 
   // Extend upstream tide events to cover at least the visible forecast horizon.
@@ -1564,6 +1698,7 @@ function renderForecast(data, tideEvents) {
           windColor,
         );
         cell.classList.add('wind-power-cell');
+        if (!column.isDaylight) cell.classList.add('night-col');
         if (score.details?.wind) {
           cell.title = score.details.wind;
         }
@@ -1589,6 +1724,7 @@ function renderForecast(data, tideEvents) {
           '',
           gustColor,
         );
+        if (!column.isDaylight) cell.classList.add('night-col');
         if (score.details?.gust) {
           cell.title = score.details.gust;
         }
@@ -1609,6 +1745,7 @@ function renderForecast(data, tideEvents) {
           '',
           'rgba(8, 18, 28, 0.5)',
         );
+        if (!column.isDaylight) cell.classList.add('night-col');
         if (score.details?.gust) {
           cell.title = score.details.gust;
         }
@@ -1622,6 +1759,7 @@ function renderForecast(data, tideEvents) {
         const score = columnScores[colIndex];
         const cell = buildDirectionCell(direction, degrees);
         cell.style.background = 'rgba(8, 18, 28, 0.5)';
+        if (!column.isDaylight) cell.classList.add('night-col');
         if (score.details?.direction) {
           cell.title = score.details.direction;
         }
@@ -1652,6 +1790,8 @@ function renderForecast(data, tideEvents) {
             { value: 3, color: '#c0392b' },
           ]),
         );
+        cell.classList.add('wave-cell');
+        if (!column.isDaylight) cell.classList.add('night-col');
         if (score.details?.waves) {
           cell.title = score.details.waves;
         }
@@ -1667,6 +1807,8 @@ function renderForecast(data, tideEvents) {
         const tideText = tideForWindow(tideSeries, windowStart, windowEnd);
         const score = columnScores[colIndex];
         const cell = buildDataCell(tideText, '');
+        cell.classList.add('tide-cell');
+        if (!column.isDaylight) cell.classList.add('night-col');
         if (score.details?.tide) {
           cell.title = score.details.tide;
         }
@@ -1687,6 +1829,8 @@ function renderForecast(data, tideEvents) {
             { value: 22, color: '#f2545b' },
           ]),
         );
+        cell.classList.add('temperature-cell');
+        if (!column.isDaylight) cell.classList.add('night-col');
         tr.appendChild(cell);
         return;
       }
@@ -1708,6 +1852,8 @@ function renderForecast(data, tideEvents) {
             { value: 80, color: '#0a1828' },
           ]),
         );
+        cell.classList.add('precipitation-cell');
+        if (!column.isDaylight) cell.classList.add('night-col');
         tr.appendChild(cell);
         return;
       }
@@ -1726,6 +1872,7 @@ function renderForecast(data, tideEvents) {
           ]),
         );
         cell.classList.add('sky-cell');
+        if (!column.isDaylight) cell.classList.add('night-col');
         const main = cell.querySelector('.cell-main');
         if (main) {
           main.textContent = '';
@@ -1744,6 +1891,7 @@ function renderForecast(data, tideEvents) {
           timeGradient(column.time),
         );
         cell.classList.add('moon-cell');
+        if (!column.isDaylight) cell.classList.add('night-col');
         const main = cell.querySelector('.cell-main');
         if (main) {
           main.textContent = '';
@@ -1769,6 +1917,7 @@ function renderForecast(data, tideEvents) {
           ]),
         );
         cell.classList.add('ki-cell');
+        if (!column.isDaylight) cell.classList.add('night-col');
         const score = columnScores[colIndex];
         const tideLevel = tideLevelAt(tideSeries, column.time);
         cell.title = formatKiTooltip(score, {
@@ -1828,6 +1977,12 @@ function renderForecast(data, tideEvents) {
         config.longitude,
       ),
     });
+    renderCurrentFromForecast(
+      data,
+      tideSeries,
+      columns[columnIndex],
+      score,
+    );
   }
 
   // Sticky label width is handled via the 'forecast-scrolled' root class.
@@ -2036,6 +2191,13 @@ async function loadWaves(options = {}) {
 if (ui.refresh) {
   ui.refresh.addEventListener('click', () => {
     loadForecast({ force: true });
+  });
+}
+
+if (ui.toggleNight) {
+  ui.toggleNight.addEventListener('change', (event) => {
+    const enabled = event.target.checked;
+    document.documentElement.classList.toggle('hide-night', enabled);
   });
 }
 
