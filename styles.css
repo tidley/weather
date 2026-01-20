@@ -47,6 +47,10 @@ body {
   margin-bottom: 14px;
 }
 
+.topbar-updated {
+  text-align: right;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   font-size: 0.75rem;
