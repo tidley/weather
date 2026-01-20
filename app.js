@@ -270,6 +270,21 @@ function createMeteoconsIcon(name, extraClass) {
   return icon;
 }
 
+function createWindArrow() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add('arrow');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute(
+    'd',
+    'M3 12h12l-4-4 1.4-1.4L20.8 12l-8.4 5.4L11 16l4-4H3z',
+  );
+  path.setAttribute('fill', 'currentColor');
+  svg.appendChild(path);
+  return svg;
+}
+
 function colorForValue(value, stops) {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return 'transparent';
@@ -1171,8 +1186,7 @@ function buildDirectionCell(direction, degrees, subText) {
   cell.className = 'data-cell wind-direction-cell';
   const wrapper = document.createElement('div');
   wrapper.className = 'wind-cell';
-  const arrow = document.createElement('span');
-  arrow.className = 'arrow';
+  const arrow = createWindArrow();
   arrow.style.transform = arrowForDegrees(degrees);
   const dirEl = document.createElement('span');
   dirEl.className = 'cell-main';
@@ -1193,8 +1207,7 @@ function buildWindCell(speed, direction, degrees) {
   cell.className = 'data-cell';
   const wrapper = document.createElement('div');
   wrapper.className = 'wind-cell';
-  const arrow = document.createElement('span');
-  arrow.className = 'arrow';
+  const arrow = createWindArrow();
   arrow.style.transform = arrowForDegrees(degrees);
   const speedEl = document.createElement('span');
   speedEl.className = 'cell-main';
