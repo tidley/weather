@@ -622,15 +622,13 @@ function renderCurrentFromForecast(data, tideSeries, column, score) {
     ui.currentCloudIcon.style.color = cloud < 20 ? '#ffd54a' : '#dbe7ff';
   }
   if (ui.currentMoon) {
-    ui.currentMoon.textContent = `${Math.round(moon.illumination * 100)}%`;
+    ui.currentMoon.textContent = '';
   }
   if (ui.currentMoonIcon) {
-    renderMeteoconsIcon(ui.currentMoonIcon, moon.icon);
+    ui.currentMoonIcon.innerHTML = '';
   }
   if (ui.currentTide) {
-    ui.currentTide.textContent = tideLevel
-      ? `${tideLevel.height.toFixed(1)} m`
-      : '—';
+    ui.currentTide.textContent = '';
   }
   if (ui.currentScore && score) {
     ui.currentScore.title = formatKiTooltip(score, {
@@ -1926,7 +1924,7 @@ function renderForecast(data, tideEvents) {
         const cell = buildDataCell(
           '',
           `${Math.round(illumination * 100)}%`,
-          timeGradient(column.time),
+          dayStripeColor(column.time),
         );
         cell.classList.add('moon-cell');
         if (!column.isDaylight) cell.classList.add('night-col');
