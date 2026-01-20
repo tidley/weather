@@ -523,7 +523,9 @@ function renderCurrent(data) {
   }
   ui.currentGusts.textContent = formatValue(current.wind_gusts_10m, ' kt');
   ui.currentPrecip.textContent = formatValue(current.precipitation, ' mm');
-  ui.currentCloud.textContent = formatValue(current.cloud_cover, '% cloud');
+  if (ui.currentCloud) {
+    ui.currentCloud.textContent = formatValue(current.cloud_cover, '% cloud');
+  }
   if (ui.currentDirection) {
     ui.currentDirection.textContent = windCompass(current.wind_direction_10m);
   }
