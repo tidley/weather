@@ -33,7 +33,6 @@ const ui = {
   currentWind: document.getElementById('current-wind'),
   summaryBand: document.getElementById('decision-band'),
   summaryOverall: document.getElementById('summary-overall'),
-  summaryOverallReason: document.getElementById('summary-overall-reason'),
   summaryUpdated: document.getElementById('summary-updated'),
   summaryWind: document.getElementById('summary-wind'),
   summaryGusts: document.getElementById('summary-gusts'),
@@ -590,7 +589,6 @@ function renderSummary(data, tideSeries, column, score, tideRange) {
   if (ui.summaryBand) ui.summaryBand.dataset.verdict = verdict;
   if (ui.summaryOverall)
     ui.summaryOverall.textContent = `${verdict} ${kiPct}%`;
-  if (ui.summaryOverallReason) ui.summaryOverallReason.textContent = reason;
 
   if (ui.summaryWind) {
     ui.summaryWind.textContent = formatOrDash(wind, 'kt');
@@ -624,20 +622,23 @@ function renderSummary(data, tideSeries, column, score, tideRange) {
     const periodText = Number.isFinite(wavePeriod)
       ? ` @ ${wavePeriod.toFixed(1)} s`
       : '';
-    ui.summaryWaves.textContent = `Waves ${wavesText}${periodText}`;
+    const target = ui.summaryWaves.querySelector('span:last-child');
+    if (target) target.textContent = `${wavesText}${periodText}`;
   }
   if (ui.summaryTide) {
     const semantic = tideLabel(tideLevel, tideRange);
     const tideText = semantic
-      ? `Tide ${semantic}`
-      : `Tide ${formatOrDash(tideLevel?.height, 'm', 1)}`;
-    ui.summaryTide.textContent = tideText;
+      ? semantic
+      : formatOrDash(tideLevel?.height, 'm', 1);
+    const target = ui.summaryTide.querySelector('span:last-child');
+    if (target) target.textContent = tideText;
   }
   if (ui.summaryRain) {
     const rainText = Number.isFinite(rainMm)
-      ? `Rain ${rainMm.toFixed(1).replace(/\.0$/, '')} mm`
-      : 'Rain —';
-    ui.summaryRain.textContent = rainText;
+      ? `${rainMm.toFixed(1).replace(/\.0$/, '')} mm`
+      : '—';
+    const target = ui.summaryRain.querySelector('span:last-child');
+    if (target) target.textContent = rainText;
     ui.summaryRain.classList.toggle('muted', Number(rainMm) === 0);
   }
 
