@@ -16,15 +16,16 @@
     </header>
 
     <section class="summary-bar" aria-live="polite">
-      <div class="decision-band" id="decision-band">
-        <div class="decision-left">
-          <p class="decision-label" id="decision-label">—</p>
-          <p class="decision-reason" id="decision-reason">—</p>
-        </div>
-        <div class="decision-ki" id="decision-ki">—</div>
-      </div>
-      <p class="summary-updated" id="summary-updated">Weather — · Tides —</p>
       <div class="primary-row">
+        <div class="summary-card summary-overall" id="decision-band">
+          <p class="summary-label">OVERALL</p>
+          <div class="overall-row">
+            <p class="decision-label" id="decision-label">—</p>
+            <p class="decision-ki" id="decision-ki">—</p>
+          </div>
+          <p class="decision-reason" id="decision-reason">—</p>
+          <p class="summary-updated" id="summary-updated">Weather — · Tides —</p>
+        </div>
         <div class="summary-card">
           <p class="summary-label">WIND</p>
           <p class="summary-value" id="summary-wind">— kt</p>
@@ -43,16 +44,15 @@
             <span class="summary-icon" id="summary-direction-icon"></span>
           </p>
         </div>
+      </div>
+      <div class="modifiers-row">
         <div class="summary-card">
           <p class="summary-label">AIR TEMP</p>
           <p class="summary-value" id="summary-temp">— °C</p>
         </div>
-      </div>
-      <div class="modifiers-row">
         <div class="summary-chip" id="summary-waves">Waves —</div>
         <div class="summary-chip" id="summary-tide">Tide —</div>
         <div class="summary-chip" id="summary-rain">Rain —</div>
-        <div class="summary-chip" id="summary-daylight">Daylight —</div>
       </div>
       <div class="chips-row" id="summary-chips"></div>
     </section>

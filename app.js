@@ -45,7 +45,6 @@ const ui = {
   summaryWaves: document.getElementById('summary-waves'),
   summaryTide: document.getElementById('summary-tide'),
   summaryRain: document.getElementById('summary-rain'),
-  summaryDaylight: document.getElementById('summary-daylight'),
   summaryChips: document.getElementById('summary-chips'),
   forecastGrid: document.getElementById('forecast-grid'),
   forecastHeadRow: document.getElementById('forecast-head-row'),
@@ -641,9 +640,6 @@ function renderSummary(data, tideSeries, column, score, tideRange) {
       : 'Rain —';
     ui.summaryRain.textContent = rainText;
     ui.summaryRain.classList.toggle('muted', Number(rainMm) === 0);
-  }
-  if (ui.summaryDaylight) {
-    ui.summaryDaylight.textContent = column.isDaylight ? 'Daylight Day' : 'Daylight Night';
   }
 
   if (ui.summaryChips) {
