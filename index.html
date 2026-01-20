@@ -18,24 +18,27 @@
     <section class="summary-bar" aria-live="polite">
       <div class="primary-row">
         <div class="summary-card summary-overall" id="decision-band">
-          <p class="summary-label">OVERALL</p>
-          <p class="summary-value" id="summary-overall">—</p>
-          <p class="summary-sub" id="summary-overall-reason">—</p>
+          <p class="summary-value summary-inline">
+            <span class="summary-title">OVERALL</span>
+            <span id="summary-overall">—</span>
+          </p>
         </div>
         <div class="summary-card">
-          <p class="summary-label">WIND</p>
-          <p class="summary-value" id="summary-wind">— kt</p>
+          <p class="summary-value summary-inline">
+            <span class="summary-title">WIND</span>
+            <span id="summary-wind">— kt</span>
+          </p>
         </div>
         <div class="summary-card">
-          <p class="summary-label">GUSTS</p>
-          <p class="summary-value">
+          <p class="summary-value summary-inline">
+            <span class="summary-title">GUSTS</span>
             <span id="summary-gusts">—</span> kt
             <span class="summary-badge" id="summary-gust-factor"></span>
           </p>
         </div>
         <div class="summary-card">
-          <p class="summary-label">DIRECTION</p>
-          <p class="summary-value">
+          <p class="summary-value summary-inline">
+            <span class="summary-title">DIRECTION</span>
             <span id="summary-direction">—</span>
             <span class="summary-icon" id="summary-direction-icon"></span>
           </p>
@@ -44,12 +47,23 @@
       <p class="summary-updated" id="summary-updated">Weather — · Tides —</p>
       <div class="modifiers-row">
         <div class="summary-card">
-          <p class="summary-label">AIR TEMP</p>
-          <p class="summary-value" id="summary-temp">— °C</p>
+          <p class="summary-value summary-inline">
+            <span class="summary-title">AIR TEMP</span>
+            <span id="summary-temp">— °C</span>
+          </p>
         </div>
-        <div class="summary-chip" id="summary-waves">Waves —</div>
-        <div class="summary-chip" id="summary-tide">Tide —</div>
-        <div class="summary-chip" id="summary-rain">Rain —</div>
+        <div class="summary-chip summary-inline" id="summary-waves">
+          <span class="summary-title">WAVES</span>
+          <span>—</span>
+        </div>
+        <div class="summary-chip summary-inline" id="summary-tide">
+          <span class="summary-title">TIDE</span>
+          <span>—</span>
+        </div>
+        <div class="summary-chip summary-inline" id="summary-rain">
+          <span class="summary-title">RAIN</span>
+          <span>—</span>
+        </div>
       </div>
       <div class="chips-row" id="summary-chips"></div>
     </section>

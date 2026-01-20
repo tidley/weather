@@ -267,7 +267,7 @@ h2 {
 }
 
 .summary-label {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 0.66rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -279,6 +279,14 @@ h2 {
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--ink);
+}
+
+.summary-card,
+.summary-chip {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
 }
 
 .summary-badge {
@@ -304,6 +312,18 @@ h2 {
   color: var(--muted);
 }
 
+.summary-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.summary-title {
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 .chips-row {
   display: flex;
   flex-wrap: wrap;
