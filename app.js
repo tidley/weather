@@ -32,9 +32,8 @@ const ui = {
   currentTemp: document.getElementById('current-temp'),
   currentWind: document.getElementById('current-wind'),
   summaryBand: document.getElementById('decision-band'),
-  summaryLabel: document.getElementById('decision-label'),
-  summaryReason: document.getElementById('decision-reason'),
-  summaryKi: document.getElementById('decision-ki'),
+  summaryOverall: document.getElementById('summary-overall'),
+  summaryOverallReason: document.getElementById('summary-overall-reason'),
   summaryUpdated: document.getElementById('summary-updated'),
   summaryWind: document.getElementById('summary-wind'),
   summaryGusts: document.getElementById('summary-gusts'),
@@ -589,9 +588,9 @@ function renderSummary(data, tideSeries, column, score, tideRange) {
   });
 
   if (ui.summaryBand) ui.summaryBand.dataset.verdict = verdict;
-  if (ui.summaryLabel) ui.summaryLabel.textContent = verdict;
-  if (ui.summaryReason) ui.summaryReason.textContent = reason;
-  if (ui.summaryKi) ui.summaryKi.textContent = `${kiPct}%`;
+  if (ui.summaryOverall)
+    ui.summaryOverall.textContent = `${verdict} ${kiPct}%`;
+  if (ui.summaryOverallReason) ui.summaryOverallReason.textContent = reason;
 
   if (ui.summaryWind) {
     ui.summaryWind.textContent = formatOrDash(wind, 'kt');
