@@ -199,100 +199,49 @@ h2 {
   margin-bottom: 14px;
 }
 
-.summary-overall {
+.summary-tile {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  border-radius: 12px;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
   background: rgba(15, 28, 42, 0.9);
   border: 1px solid rgba(231, 242, 255, 0.12);
 }
 
-.summary-overall[data-verdict="GOOD"] {
+.summary-tile[data-verdict="GOOD"] {
   background: rgba(26, 122, 99, 0.28);
 }
 
-.summary-overall[data-verdict="MARGINAL"] {
+.summary-tile[data-verdict="MARGINAL"] {
   background: rgba(46, 79, 118, 0.3);
 }
 
-.summary-overall[data-verdict="POOR"] {
+.summary-tile[data-verdict="POOR"] {
   background: rgba(120, 60, 60, 0.3);
-}
-
-.summary-sub {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--muted);
 }
 
 .summary-updated {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--muted);
 }
 
-.summary-updated-inline {
-  align-self: start;
-  grid-column: 1 / 2;
-  margin-top: -6px;
-}
-
-.primary-row,
-.modifiers-row {
+.summary-grid {
   display: grid;
-  gap: 10px;
-}
-
-.primary-row {
+  gap: 8px 12px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.modifiers-row {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.summary-card,
-.summary-chip {
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(8, 18, 28, 0.7);
-  border: 1px solid rgba(231, 242, 255, 0.08);
-}
-
-.summary-card,
-.summary-overall {
-  min-height: 60px;
-  max-height: 60px;
-}
-
-.summary-overall .summary-sub {
-  line-height: 1.1;
-  max-height: 2.2em;
-  overflow: hidden;
-}
-
-.summary-label {
-  margin: 0;
-  font-size: 0.66rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.summary-value {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--ink);
-}
-
-.summary-card,
-.summary-chip {
+.summary-item {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 3px;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+}
+
+.summary-overall-line {
+  font-weight: 600;
 }
 
 .summary-badge {
@@ -309,17 +258,12 @@ h2 {
   font-size: 1rem;
 }
 
-.summary-chip {
-  font-size: 0.82rem;
-  color: var(--ink);
-}
-
-.summary-chip.muted {
+.summary-item.muted {
   color: var(--muted);
 }
 
 .summary-inline {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
 }
@@ -505,14 +449,8 @@ h2 {
 }
 
 @media (max-width: 640px) {
-  .primary-row,
-  .modifiers-row {
+  .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .summary-updated-inline {
-    grid-column: 1 / -1;
-    margin-top: 0;
   }
 
   .decision-ki {
