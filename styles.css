@@ -195,7 +195,7 @@ h2 {
 
 .summary-bar {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 14px;
 }
 
@@ -232,10 +232,16 @@ h2 {
   color: var(--muted);
 }
 
+.summary-updated-inline {
+  align-self: start;
+  grid-column: 1 / 2;
+  margin-top: -6px;
+}
+
 .primary-row,
 .modifiers-row {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .primary-row {
@@ -286,7 +292,7 @@ h2 {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .summary-badge {
@@ -502,6 +508,11 @@ h2 {
   .primary-row,
   .modifiers-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-updated-inline {
+    grid-column: 1 / -1;
+    margin-top: 0;
   }
 
   .decision-ki {
