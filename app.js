@@ -331,6 +331,12 @@ function lerpColor(start, end, t) {
 }
 
 function timeGradient(time) {
+  const hour = time.getHours() + time.getMinutes() / 60;
+  const t = hour <= 12 ? hour / 12 : (24 - hour) / 12;
+  return lerpColor('#02060b', '#1e4e9c', t);
+}
+
+function dayStripeColor(time) {
   const dayStart = new Date(time.getFullYear(), time.getMonth(), time.getDate());
   const dayIndex = Math.floor(dayStart.getTime() / 86400000);
   return dayIndex % 2 === 0 ? '#06101c' : '#163a5a';
@@ -1132,7 +1138,7 @@ function buildHeaderCell(time, isDaylightNow) {
   if (!isDaylightNow) {
     cell.classList.add('night-col');
   }
-  cell.style.background = timeGradient(time);
+  cell.style.background = dayStripeColor(time);
   const wrapper = document.createElement('div');
   wrapper.className = 'cell-stack';
   const day = document.createElement('span');
@@ -1141,10 +1147,7 @@ function buildHeaderCell(time, isDaylightNow) {
   const date = document.createElement('span');
   date.className = 'cell-line';
   date.textContent = formatHeaderDate.format(time);
-  const hour = document.createElement('span');
-  hour.className = 'cell-line';
-  hour.textContent = `${formatHeaderHour.format(time)}h`;
-  wrapper.append(day, date, hour);
+  wrapper.append(day, date);
   cell.appendChild(wrapper);
   return cell;
 }
@@ -1606,6 +1609,7 @@ function renderForecast(data, tideEvents) {
   const tideSeries = extendTideEvents(tideEvents, targetEnd);
 
   const rows = [
+    { label: 'Time', abbrev: 'Time', key: 'time' },
     { label: 'KI', abbrev: 'KI', key: 'ki' },
     { label: 'Temp (°C)', abbrev: 'Temp', key: 'temperature_2m' },
     { label: 'Wind (kt)', abbrev: 'Wind', key: 'wind_speed' },
@@ -1950,6 +1954,13 @@ function renderForecast(data, tideEvents) {
           main.appendChild(createMeteoconsIcon(icon));
           main.style.color = '#ffdca8';
         }
+        tr.appendChild(cell);
+        return;
+      }
+
+      if (row.key === 'time') {
+        const cell = buildTimeCell(column.time);
+        if (!column.isDaylight) cell.classList.add('night-col');
         tr.appendChild(cell);
         return;
       }
