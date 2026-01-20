@@ -225,7 +225,7 @@ h2 {
 
 .forecast-controls {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   padding: 4px 2px 8px;
   font-size: 0.75rem;
   color: var(--muted);
@@ -586,6 +586,15 @@ h2 {
 
 .tide-predicted-zone {
   fill: rgba(2, 6, 11, 0.55);
+}
+
+.tide-night-cover {
+  display: none;
+  fill: rgba(7, 19, 31, 0.9);
+}
+
+.hide-night .tide-night-cover {
+  display: inline;
 }
 
 .tide-curve-cell {

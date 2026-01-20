@@ -1374,6 +1374,13 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
     const rect = cell.getBoundingClientRect();
     return rect.left - svgLeft + rect.width / 2;
   });
+  const headerBounds = headerCells.map((cell) => {
+    const rect = cell.getBoundingClientRect();
+    return {
+      left: rect.left - svgLeft,
+      right: rect.left - svgLeft + rect.width,
+    };
+  });
   const startX = headerCenters[0];
   const endX = headerCenters[headerCenters.length - 1];
   const start = columns[0]?.time ?? new Date();
@@ -1444,6 +1451,22 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
     shade.setAttribute('class', 'tide-predicted-zone');
     svg.appendChild(shade);
   }
+
+  columns.forEach((column, index) => {
+    if (column.isDaylight) return;
+    const bounds = headerBounds[index];
+    if (!bounds) return;
+    const shade = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'rect',
+    );
+    shade.setAttribute('x', bounds.left);
+    shade.setAttribute('y', 0);
+    shade.setAttribute('width', Math.max(0, bounds.right - bounds.left));
+    shade.setAttribute('height', svgHeight);
+    shade.setAttribute('class', 'tide-night-cover');
+    svg.appendChild(shade);
+  });
 
   events.forEach((event) => {
     if (!event.type || (event.type !== 'HIGH' && event.type !== 'LOW')) return;
@@ -1523,48 +1546,6 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
       renderTideChart.lastLabelX = cx;
     }
   });
-}
-
-function renderTideSegment(svg, tideEvents, windowStart, windowEnd, scale) {
-  svg.innerHTML = '';
-  const width = 60;
-  const height = 40;
-  const padding = 4;
-  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  svg.setAttribute('preserveAspectRatio', 'none');
-
-  if (!tideEvents.length) return;
-  const minHeight = scale?.min ?? 0;
-  const maxHeight = scale?.max ?? 1;
-  const scaleY = (value) => {
-    const ratio = (value - minHeight) / (maxHeight - minHeight || 1);
-    return height - padding - ratio * (height - padding * 2);
-  };
-  const scaleX = (date) =>
-    padding +
-    ((date - windowStart) / (windowEnd - windowStart || 1)) *
-      (width - padding * 2);
-
-  const points = [];
-  const segmentMinutes = (windowEnd - windowStart) / (60 * 1000);
-  const step = 15;
-  for (let m = 0; m <= segmentMinutes; m += step) {
-    const time = new Date(windowStart.getTime() + m * 60 * 1000);
-    const level = tideLevelAt(tideEvents, time);
-    if (!level) continue;
-    points.push({ x: scaleX(time), y: scaleY(level.height) });
-  }
-  if (points.length < 2) return;
-
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  const d = points
-    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
-    .join(' ');
-  path.setAttribute('d', d);
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke', '#2c6bbf');
-  path.setAttribute('stroke-width', '2');
-  svg.appendChild(path);
 }
 
 function renderForecast(data, tideEvents) {
@@ -1713,23 +1694,13 @@ function renderForecast(data, tideEvents) {
     tr.appendChild(label);
 
     if (row.key === 'tide_curve') {
-      const scale = tideHeights.length
-        ? { min: Math.min(...tideHeights) - 0.5, max: Math.max(...tideHeights) + 0.5 }
-        : { min: 0, max: 1 };
-      columns.forEach((column) => {
-        const cell = document.createElement('td');
-        cell.className = 'data-cell tide-curve-cell';
-        if (!column.isDaylight) cell.classList.add('night-col');
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('class', 'tide-row-svg');
-        const windowStart = column.time;
-        const windowEnd = new Date(
-          windowStart.getTime() + windowSize * 60 * 60 * 1000,
-        );
-        renderTideSegment(svg, tideSeries, windowStart, windowEnd, scale);
-        cell.appendChild(svg);
-        tr.appendChild(cell);
-      });
+      const cell = document.createElement('td');
+      cell.className = 'data-cell tide-curve-cell';
+      cell.colSpan = columns.length;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'tide-row-svg');
+      cell.appendChild(svg);
+      tr.appendChild(cell);
       ui.forecastBody.appendChild(tr);
       return;
     }
@@ -2011,6 +1982,13 @@ function renderForecast(data, tideEvents) {
     }
   } else if (ui.forecastRange) {
     ui.forecastRange.textContent = 'No forecast windows';
+  }
+
+  const curveRow = ui.forecastBody.querySelector('.tide-curve-cell svg');
+  if (curveRow) {
+    requestAnimationFrame(() => {
+      renderTideChart(curveRow, tideSeries, columns, headerCells);
+    });
   }
 
   if (ui.currentScore && columns.length) {
