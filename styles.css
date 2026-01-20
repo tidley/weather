@@ -202,8 +202,8 @@ h2 {
 .summary-overall {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
+  gap: 4px;
+  padding: 8px 10px;
   border-radius: 12px;
   background: rgba(15, 28, 42, 0.9);
   border: 1px solid rgba(231, 242, 255, 0.12);
@@ -225,26 +225,26 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
 }
 
 .decision-label {
   margin: 0;
-  font-size: 0.78rem;
-  letter-spacing: 0.16em;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .decision-reason {
-  margin: 6px 0 0;
-  font-size: 0.9rem;
+  margin: 0;
+  font-size: 0.85rem;
   color: var(--ink);
 }
 
 .decision-ki {
-  font-size: 2.1rem;
-  font-weight: 600;
+  font-size: 1.05rem;
+  font-weight: 500;
   color: var(--ink);
 }
 
@@ -270,7 +270,7 @@ h2 {
 
 .summary-card,
 .summary-chip {
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 12px;
   background: rgba(8, 18, 28, 0.7);
   border: 1px solid rgba(231, 242, 255, 0.08);
@@ -278,20 +278,20 @@ h2 {
 
 .summary-card,
 .summary-overall {
-  min-height: 80px;
-  max-height: 80px;
+  min-height: 60px;
+  max-height: 60px;
 }
 
 .summary-overall .decision-reason {
-  font-size: 0.82rem;
-  line-height: 1.2;
-  max-height: 2.4em;
+  font-size: 0.85rem;
+  line-height: 1.1;
+  max-height: 2.2em;
   overflow: hidden;
 }
 
 .summary-label {
-  margin: 0 0 6px;
-  font-size: 0.7rem;
+  margin: 0 0 4px;
+  font-size: 0.66rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
@@ -299,7 +299,7 @@ h2 {
 
 .summary-value {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--ink);
 }
