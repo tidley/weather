@@ -19,6 +19,10 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
@@ -379,6 +383,7 @@ h2 {
 .forecast-scroll {
   overflow-x: auto;
   padding-bottom: 4px;
+  max-width: 100%;
 }
 
 .forecast-grid {
@@ -488,8 +493,8 @@ h2 {
 
   .forecast {
     border-radius: 0;
-    margin-left: calc(-5vw);
-    margin-right: calc(-5vw);
+    margin-left: 0;
+    margin-right: 0;
     padding: 0;
     border: none;
     box-shadow: none;
@@ -498,8 +503,8 @@ h2 {
 
   .forecast .card-header,
   .forecast .forecast-scroll {
-    padding-left: 5vw;
-    padding-right: 5vw;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .forecast .card-header {
@@ -841,8 +846,8 @@ h2 {
   }
 
   .forecast-scroll {
-    margin: 0 -4vw;
-    padding: 0 4vw 10px;
+    margin: 0;
+    padding: 0 0 10px;
     -webkit-overflow-scrolling: touch;
   }
 
