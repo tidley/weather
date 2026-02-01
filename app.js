@@ -98,6 +98,7 @@ const meteoconsCache = new Map();
 let tapTooltip;
 let tapTooltipTarget;
 let tapTooltipVisible = false;
+let moonIconId = 0;
 
 function shouldEnableTapTooltips() {
   return window.matchMedia && window.matchMedia('(hover: none)').matches;
@@ -290,6 +291,24 @@ function createMoonPhaseIcon(illumination, isWaxing) {
   const cy = 12;
   const shift = 2 * r * Math.min(Math.max(illumination, 0), 1);
   const dx = isWaxing ? shift : -shift;
+  const clipId = `moon-clip-${moonIconId++}`;
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const clipPath = document.createElementNS(
+    'http://www.w3.org/2000/svg',
+    'clipPath',
+  );
+  clipPath.setAttribute('id', clipId);
+  const clipCircle = document.createElementNS(
+    'http://www.w3.org/2000/svg',
+    'circle',
+  );
+  clipCircle.setAttribute('cx', String(cx));
+  clipCircle.setAttribute('cy', String(cy));
+  clipCircle.setAttribute('r', String(r));
+  clipPath.appendChild(clipCircle);
+  defs.appendChild(clipPath);
+  svg.appendChild(defs);
 
   const lit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   lit.setAttribute('cx', String(cx));
@@ -305,6 +324,7 @@ function createMoonPhaseIcon(illumination, isWaxing) {
   shadow.setAttribute('cy', String(cy));
   shadow.setAttribute('r', String(r));
   shadow.setAttribute('fill', '#0b1f2a');
+  shadow.setAttribute('clip-path', `url(#${clipId})`);
 
   svg.appendChild(lit);
   svg.appendChild(shadow);
