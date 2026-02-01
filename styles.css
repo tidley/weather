@@ -215,6 +215,7 @@ h2 {
   border-radius: 14px;
   background: rgba(15, 28, 42, 0.9);
   border: 1px solid rgba(231, 242, 255, 0.12);
+  cursor: help;
 }
 
 .summary-tile[data-verdict="GOOD"] {
