@@ -547,6 +547,12 @@ h2 {
   color: #dbe7ff;
 }
 
+.moon-phase-icon {
+  width: 1.9rem;
+  height: 1.9rem;
+  display: inline-block;
+}
+
 .label-with-icon {
   display: inline-flex;
   align-items: center;
