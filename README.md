@@ -30,6 +30,20 @@ The PHP endpoints are:
 
 LocalStorage is also used for front-end caching.
 
+## Install as a PWA (mobile home screen)
+
+PWA install needs HTTPS (or `http://localhost`). For a phone, run this on a host with HTTPS.
+
+iOS (Safari):
+1. Open the site.
+2. Tap the Share button.
+3. Choose **Add to Home Screen**.
+
+Android (Chrome):
+1. Open the site.
+2. Tap the menu.
+3. Choose **Install app** / **Add to Home screen**.
+
 ## Configure location
 
 Edit the `config` block in `app.js`:
