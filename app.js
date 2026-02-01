@@ -437,14 +437,14 @@ function lunarPhaseInfo(date) {
   const fraction = phase / synodicMonth;
   const index = Math.floor(fraction * 8) % 8;
   const icons = [
-    'moon-new',
-    'moon-waxing-crescent',
-    'moon-first-quarter',
-    'moon-waxing-gibbous',
-    'moon-full',
-    'moon-waning-gibbous',
-    'moon-last-quarter',
-    'moon-waning-crescent',
+    'moon-new-fill',
+    'moon-waxing-crescent-fill',
+    'moon-first-quarter-fill',
+    'moon-waxing-gibbous-fill',
+    'moon-full-fill',
+    'moon-waning-gibbous-fill',
+    'moon-last-quarter-fill',
+    'moon-waning-crescent-fill',
   ];
   const illumination = (1 - Math.cos(2 * Math.PI * fraction)) / 2;
   return { icon: icons[index], illumination };
@@ -1885,7 +1885,7 @@ function renderForecast(data, tideEvents) {
       if (row.key === 'temperature_2m') {
         const temp = data.hourly.temperature_2m[column.index];
         const cell = buildDataCell(
-          `${Math.round(temp)}°`,
+          `${Math.round(temp)}°C`,
           '',
           colorForValue(temp, [
             { value: -2, color: '#1b2b44' },

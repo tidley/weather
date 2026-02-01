@@ -41,6 +41,8 @@ body {
   padding: 32px 5vw 60px;
   max-width: none;
   margin: 0;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .topbar {
@@ -727,7 +729,7 @@ h2 {
 
 .ambient {
   position: fixed;
-  inset: auto -20% -30% -20%;
+  inset: auto 0 -30% 0;
   height: 320px;
   background: radial-gradient(circle at 30% 50%, rgba(98, 193, 255, 0.4), transparent 60%),
     radial-gradient(circle at 70% 50%, rgba(44, 107, 191, 0.35), transparent 55%);
