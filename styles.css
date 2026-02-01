@@ -20,7 +20,10 @@
 }
 
 html {
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -32,7 +35,11 @@ body {
     linear-gradient(160deg, var(--bg) 0%, var(--bg-deep) 100%);
   min-height: 100vh;
   position: relative;
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
 }
 
 .app {
@@ -207,6 +214,7 @@ h2 {
   display: grid;
   gap: 10px;
   margin-bottom: 14px;
+  max-width: 100%;
 }
 
 .summary-tile {
@@ -392,6 +400,7 @@ h2 {
 .forecast-grid {
   border-collapse: collapse;
   width: max-content;
+  max-width: 100%;
   font-size: 0.78rem;
 }
 
@@ -889,6 +898,7 @@ h2 {
   margin-top: 18px;
   font-size: 0.75rem;
   color: var(--muted);
+  max-width: 100%;
 }
 
 .page-footer a {
