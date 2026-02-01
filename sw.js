@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const STATIC_CACHE = `forecast-static-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
@@ -6,7 +6,7 @@ const STATIC_ASSETS = [
   "index.html",
   "styles.css",
   "app.js",
-  "manifest.webmanifest",
+  "manifest.json",
   "icons/icon-192.png",
   "icons/icon-512.png",
   "icons/icon-180.png"

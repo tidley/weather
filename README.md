@@ -33,6 +33,7 @@ LocalStorage is also used for front-end caching.
 ## Install as a PWA (mobile home screen)
 
 PWA install needs HTTPS (or `http://localhost`). For a phone, run this on a host with HTTPS.
+Firefox Android only shows **Add app to Home screen** when the site is installable (HTTPS + valid manifest + service worker). If you only see **Add to Home screen**, it is not installable yet.
 
 iOS (Safari):
 1. Open the site.
@@ -71,4 +72,3 @@ UKHO_KEY=your-key-here
 https://kiting.tomdwyer.uk
 
 <img width="995" height="865" alt="image" src="https://github.com/user-attachments/assets/357976c4-8ca7-4f1b-9b9c-5a28b72f3e61" />
-
