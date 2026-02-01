@@ -2258,25 +2258,3 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-
-if (window.location.search.includes('debug-overflow=1')) {
-  window.addEventListener('load', () => {
-    const offenders = [];
-    const viewportWidth = document.documentElement.clientWidth;
-    document.querySelectorAll('body *').forEach((el) => {
-      const rect = el.getBoundingClientRect();
-      const overflow = rect.right - viewportWidth;
-      if (overflow > 1) {
-        offenders.push({
-          tag: el.tagName.toLowerCase(),
-          class: el.className,
-          id: el.id,
-          overflow: Math.round(overflow),
-          width: Math.round(rect.width),
-        });
-        el.style.outline = '1px solid rgba(255, 80, 80, 0.8)';
-      }
-    });
-    console.log('Overflow offenders:', offenders);
-  });
-}
