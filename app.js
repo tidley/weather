@@ -279,6 +279,38 @@ function createMeteoconsIcon(name, extraClass) {
   return icon;
 }
 
+function createMoonPhaseIcon(illumination, isWaxing) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add('moon-phase-icon');
+
+  const r = 9;
+  const cx = 12;
+  const cy = 12;
+  const shift = 2 * r * Math.min(Math.max(illumination, 0), 1);
+  const dx = isWaxing ? shift : -shift;
+
+  const lit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  lit.setAttribute('cx', String(cx));
+  lit.setAttribute('cy', String(cy));
+  lit.setAttribute('r', String(r));
+  lit.setAttribute('fill', '#bfe9ff');
+
+  const shadow = document.createElementNS(
+    'http://www.w3.org/2000/svg',
+    'circle',
+  );
+  shadow.setAttribute('cx', String(cx + dx));
+  shadow.setAttribute('cy', String(cy));
+  shadow.setAttribute('r', String(r));
+  shadow.setAttribute('fill', '#0b1f2a');
+
+  svg.appendChild(lit);
+  svg.appendChild(shadow);
+  return svg;
+}
+
 function createWindArrow() {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 24 24');
@@ -435,19 +467,9 @@ function lunarPhaseInfo(date) {
   const daysSince = (date.getTime() - reference) / 86400000;
   const phase = ((daysSince % synodicMonth) + synodicMonth) % synodicMonth;
   const fraction = phase / synodicMonth;
-  const index = Math.floor(fraction * 8) % 8;
-  const icons = [
-    'moon-new-fill',
-    'moon-waxing-crescent-fill',
-    'moon-first-quarter-fill',
-    'moon-waxing-gibbous-fill',
-    'moon-full-fill',
-    'moon-waning-gibbous-fill',
-    'moon-last-quarter-fill',
-    'moon-waning-crescent-fill',
-  ];
   const illumination = (1 - Math.cos(2 * Math.PI * fraction)) / 2;
-  return { icon: icons[index], illumination };
+  const isWaxing = fraction < 0.5;
+  return { illumination, isWaxing };
 }
 
 function buildUrl() {
@@ -1950,7 +1972,7 @@ function renderForecast(data, tideEvents) {
       }
 
       if (row.key === 'moon') {
-        const { icon, illumination } = lunarPhaseInfo(column.time);
+        const { illumination, isWaxing } = lunarPhaseInfo(column.time);
         const cell = buildDataCell(
           '',
           `${Math.round(illumination * 100)}%`,
@@ -1961,8 +1983,7 @@ function renderForecast(data, tideEvents) {
         const main = cell.querySelector('.cell-main');
         if (main) {
           main.textContent = '';
-          main.appendChild(createMeteoconsIcon(icon));
-          main.style.color = '#ffdca8';
+          main.appendChild(createMoonPhaseIcon(illumination, isWaxing));
         }
         tr.appendChild(cell);
         return;
