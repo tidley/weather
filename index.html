@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="hide-night">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -26,7 +26,6 @@
 
     <section class="summary-bar" aria-live="polite">
       <div class="summary-tile" id="decision-band">
- 
         <div class="summary-grid">
           <div class="summary-item summary-overall-line">
             <span class="summary-title">OVERALL</span>
@@ -34,63 +33,82 @@
           </div>
         </div>
         <div class="chips-row" id="summary-chips"></div>
+      </div>
+    </section>
 
-      </section>
-
-      <section class="card forecast" id="forecast-card">
-        <div class="forecast-controls">
-          <label class="toggle">
-            <input type="checkbox" id="toggle-night" />
-            Hide night
+    <section class="card forecast" id="forecast-card">
+      <div class="forecast-controls">
+        <div
+          class="location-toggle"
+          role="radiogroup"
+          aria-label="Forecast location"
+        >
+          <label>
+            <input
+              type="radio"
+              name="forecast-location"
+              value="st-leonards"
+              checked
+            />
+            <span>St Leonards</span>
+          </label>
+          <label>
+            <input type="radio" name="forecast-location" value="hayle" />
+            <span>Hayle</span>
           </label>
         </div>
-        <div class="forecast-scroll">
-          <table class="forecast-grid" id="forecast-grid">
-            <thead>
-              <tr id="forecast-head-row">
-                <th class="label-cell">Date</th>
-              </tr>
-            </thead>
-            <tbody id="forecast-body"></tbody>
-          </table>
-        </div>
-      </section>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-night" checked />
+          Hide night
+        </label>
+      </div>
+      <div class="forecast-scroll">
+        <table class="forecast-grid" id="forecast-grid">
+          <thead>
+            <tr id="forecast-head-row">
+              <th class="label-cell">Date</th>
+            </tr>
+          </thead>
+          <tbody id="forecast-body"></tbody>
+        </table>
+      </div>
+    </section>
 
-      <footer class="page-footer">
-        <p>
-          Weather data:
-          <a href="https://open-meteo.com/" target="_blank" rel="noreferrer"
-            >Open-Meteo</a
-          >
-          · Tide data:
-          <a
-            href="https://www.admiralty.co.uk/"
-            target="_blank"
-            rel="noreferrer"
-            >UKHO Admiralty</a
-          >
-          · Icons:
-          <a
-            href="https://bas.dev/work/meteocons/"
-            target="_blank"
-            rel="noreferrer"
-            >Meteocons</a
-          >
-        </p>
-      </footer>
-    </main>
+    <footer class="page-footer">
+      <p>
+        Weather data:
+        <a href="https://open-meteo.com/" target="_blank" rel="noreferrer"
+          >Open-Meteo</a
+        >
+        · Tide data:
+        <a
+          href="https://www.admiralty.co.uk/"
+          target="_blank"
+          rel="noreferrer"
+          >UKHO Admiralty</a
+        >
+        · Icons:
+        <a
+          href="https://bas.dev/work/meteocons/"
+          target="_blank"
+          rel="noreferrer"
+          >Meteocons</a
+        >
+      </p>
+    </footer>
+  </main>
 
-    <div class="ambient"></div>
+  <div class="ambient"></div>
 
-    <template id="forecast-cell">
-      <td class="data-cell">
-        <div class="cell-stack">
-          <span class="cell-main"></span>
-          <span class="cell-sub"></span>
-        </div>
-      </td>
-    </template>
+  <template id="forecast-cell">
+    <td class="data-cell">
+      <div class="cell-stack">
+        <span class="cell-main"></span>
+        <span class="cell-sub"></span>
+      </div>
+    </td>
+  </template>
 
-    <script src="app.js" defer></script>
-  </body>
+  <script src="app.js" defer></script>
+</body>
 </html>

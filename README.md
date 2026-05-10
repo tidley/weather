@@ -1,6 +1,6 @@
 # Forecast
 
-Simple, single-location weather dashboard aimed at quick kitesurfing checks. It uses Open-Meteo for weather + marine (waves) and UKHO for tides, with local caching.
+Simple weather dashboard aimed at quick kitesurfing checks for St Leonards and Hayle, Cornwall. It uses Open-Meteo for weather + marine (waves) and UKHO for tides, with local caching.
 
 ## What’s included
 
@@ -10,7 +10,8 @@ Simple, single-location weather dashboard aimed at quick kitesurfing checks. It 
 - Dense, Windguru-style forecast table:
   - Separate rows for wind, gusts, gust factor, direction, waves, rain, sky, moon, tide, and tide curve.
   - Date row uses alternating day stripes; Time row uses time-of-day shading.
-  - Optional “Hide night” toggle to filter night columns.
+  - “Hide night” is enabled by default, with a toggle to reveal night columns.
+- Location toggle for St Leonards and Hayle.
 - Compact summary tile at the top with overall verdict, wind/gusts/direction/temp, waves/tide/rain, and reason chips.
 
 ## Run it (recommended)
@@ -45,13 +46,23 @@ Android (Chrome):
 2. Tap the menu.
 3. Choose **Install app** / **Add to Home screen**.
 
-## Configure location
+## Configure locations
 
-Edit the `config` block in `app.js`:
+Edit the `locations` block in `app.js`:
 
 - `locationName`
 - `latitude`
 - `longitude`
+- `tideStationId`
+- `tideStationName`
+
+Current locations:
+
+- St Leonards-on-Sea: weather/marine at `50.849533, 0.537056`, UKHO tide station `0085` Hastings.
+- Hayle, Cornwall: weather/marine at `50.186111, -5.421389`, UKHO tide station `0547` St. Ives.
+
+Shared settings still live in the `config` block:
+
 - `timezone`
 - `windSpeedUnit` (use `kn` for knots)
 

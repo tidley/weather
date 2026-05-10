@@ -1,9 +1,33 @@
-console.log('APP.JS VERSION:', '2026-01-14-php-tides-1');
+console.log('APP.JS VERSION:', '2026-05-10-location-toggle-1');
+
+const DEFAULT_LOCATION_KEY = 'st-leonards';
+
+const locations = {
+  'st-leonards': {
+    label: 'St Leonards',
+    locationName: 'St Leonards-on-Sea, UK',
+    latitude: 50.849533,
+    longitude: 0.537056,
+    tideStationId: '0085',
+    tideStationName: 'Hastings',
+  },
+  hayle: {
+    label: 'Hayle',
+    locationName: 'Hayle, UK',
+    latitude: 50.186111,
+    longitude: -5.421389,
+    tideStationId: '0547',
+    tideStationName: 'St. Ives',
+  },
+};
+
+const defaultLocation = locations[DEFAULT_LOCATION_KEY];
 
 const config = {
-  locationName: 'St Leonards-on-Sea, UK',
-  latitude: 50.849533,
-  longitude: 0.537056,
+  activeLocation: DEFAULT_LOCATION_KEY,
+  locationName: defaultLocation.locationName,
+  latitude: defaultLocation.latitude,
+  longitude: defaultLocation.longitude,
   timezone: 'Europe/London',
   windSpeedUnit: 'kn',
   forecastWindowHours: 2,
@@ -19,7 +43,8 @@ const config = {
   },
   tide: {
     provider: 'ukho',
-    stationId: '0085',
+    stationId: defaultLocation.tideStationId,
+    stationName: defaultLocation.tideStationName,
     sourceUrl: 'https://admiraltyapi.portal.azure-api.net/',
     apiUrl: '/tides.php',
     // Minimum tide coverage to extend to (days). Weather horizon is 16 days.
@@ -52,9 +77,13 @@ const ui = {
   tideSvg: document.getElementById('tide-svg'),
   refresh: document.getElementById('refresh'),
   toggleNight: document.getElementById('toggle-night'),
+  locationOptions: Array.from(
+    document.querySelectorAll('input[name="forecast-location"]'),
+  ),
 };
 
 const cacheKeys = {
+  location: 'forecast.location',
   weather: 'forecast.weather',
   tides: 'forecast.tides',
   waves: 'forecast.waves',
@@ -62,6 +91,32 @@ const cacheKeys = {
   tidesUpdatedAt: 'forecast.tidesUpdatedAt',
   wavesUpdatedAt: 'forecast.wavesUpdatedAt',
 };
+
+function isValidLocationKey(locationKey) {
+  return Object.prototype.hasOwnProperty.call(locations, locationKey);
+}
+
+function cacheKey(key, locationKey = config.activeLocation) {
+  if (key === 'location') return cacheKeys.location;
+  return `${cacheKeys[key]}.${locationKey}`;
+}
+
+function readLocationPreference() {
+  try {
+    const locationKey = localStorage.getItem(cacheKey('location'));
+    return isValidLocationKey(locationKey) ? locationKey : DEFAULT_LOCATION_KEY;
+  } catch (error) {
+    return DEFAULT_LOCATION_KEY;
+  }
+}
+
+function saveLocationPreference(locationKey) {
+  try {
+    localStorage.setItem(cacheKey('location'), locationKey);
+  } catch (error) {
+    console.warn('Location preference could not be saved', error);
+  }
+}
 
 const formatWindow = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',
@@ -162,11 +217,9 @@ if (forecastScrollContainer) {
   updateForecastStickyLabelModeFromScroll();
 }
 
-document
-  .querySelectorAll('.meteocons-icon[data-meteocons]')
-  .forEach((icon) => {
-    renderMeteoconsIcon(icon, icon.dataset.meteocons);
-  });
+document.querySelectorAll('.meteocons-icon[data-meteocons]').forEach((icon) => {
+  renderMeteoconsIcon(icon, icon.dataset.meteocons);
+});
 
 if (shouldEnableTapTooltips()) {
   tapTooltip = document.createElement('div');
@@ -212,6 +265,38 @@ function setSummaryUpdated(weatherIso, tidesIso) {
 
 function setLocation() {
   if (ui.locationName) ui.locationName.textContent = config.locationName;
+  document.title = `${config.locationName} Forecast`;
+}
+
+function syncLocationToggle() {
+  ui.locationOptions.forEach((input) => {
+    input.checked = input.value === config.activeLocation;
+  });
+}
+
+function applyLocation(locationKey, options = {}) {
+  const resolvedKey = isValidLocationKey(locationKey)
+    ? locationKey
+    : DEFAULT_LOCATION_KEY;
+  const location = locations[resolvedKey];
+  config.activeLocation = resolvedKey;
+  config.locationName = location.locationName;
+  config.latitude = location.latitude;
+  config.longitude = location.longitude;
+  config.tide.stationId = location.tideStationId;
+  config.tide.stationName = location.tideStationName;
+
+  if (options.persist) {
+    saveLocationPreference(resolvedKey);
+  }
+
+  setLocation();
+  syncLocationToggle();
+}
+
+function syncNightVisibility() {
+  const enabled = ui.toggleNight ? ui.toggleNight.checked : true;
+  document.documentElement.classList.toggle('hide-night', enabled);
 }
 
 function windCompass(degrees) {
@@ -337,10 +422,7 @@ function createWindArrow() {
   svg.setAttribute('aria-hidden', 'true');
   svg.classList.add('arrow');
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute(
-    'd',
-    'M3 12h12l-4-4 1.4-1.4L20.8 12l-8.4 5.4L11 16l4-4H3z',
-  );
+  path.setAttribute('d', 'M3 12h12l-4-4 1.4-1.4L20.8 12l-8.4 5.4L11 16l4-4H3z');
   path.setAttribute('fill', 'currentColor');
   svg.appendChild(path);
   return svg;
@@ -388,7 +470,11 @@ function timeGradient(time) {
 }
 
 function dayStripeColor(time) {
-  const dayStart = new Date(time.getFullYear(), time.getMonth(), time.getDate());
+  const dayStart = new Date(
+    time.getFullYear(),
+    time.getMonth(),
+    time.getDate(),
+  );
   const dayIndex = Math.floor(dayStart.getTime() / 86400000);
   return dayIndex % 2 === 0 ? '#06101c' : '#163a5a';
 }
@@ -562,13 +648,7 @@ function kiVerdict(kiPct) {
   return 'POOR';
 }
 
-function kiReason({
-  gustFactor,
-  windKt,
-  rainMm,
-  wavesM,
-  wavePeriodS,
-}) {
+function kiReason({ gustFactor, windKt, rainMm, wavesM, wavePeriodS }) {
   if (Number.isFinite(gustFactor) && gustFactor >= 2.0) return 'Gusty';
   if (Number.isFinite(windKt) && windKt < 12) return 'Light wind';
   if (Number.isFinite(rainMm) && rainMm >= 1) return 'Rain';
@@ -638,8 +718,7 @@ function renderSummary(data, tideSeries, column, score, tideRange) {
       isDaylightNow: column.isDaylight,
     });
   }
-  if (ui.summaryOverall)
-    ui.summaryOverall.textContent = `${verdict} ${kiPct}%`;
+  if (ui.summaryOverall) ui.summaryOverall.textContent = `${verdict} ${kiPct}%`;
 
   if (ui.summaryWind) {
     ui.summaryWind.textContent = formatOrDash(wind, 'kt');
@@ -693,7 +772,8 @@ function renderSummary(data, tideSeries, column, score, tideRange) {
     ui.summaryChips.style.display = 'none';
     const penalties = [];
     const boosts = [];
-    if (Number.isFinite(gustFactor) && gustFactor >= 2.0) penalties.push('Gusty');
+    if (Number.isFinite(gustFactor) && gustFactor >= 2.0)
+      penalties.push('Gusty');
     if (Number.isFinite(wind) && wind < 12) penalties.push('Light wind');
     if (Number.isFinite(rainMm) && rainMm >= 1) penalties.push('Rain');
     if (
@@ -749,10 +829,10 @@ function parseUkhOEvents(data) {
   const items = Array.isArray(data)
     ? data
     : Array.isArray(data?.items)
-    ? data.items
-    : Array.isArray(data?.data)
-    ? data.data
-    : [];
+      ? data.items
+      : Array.isArray(data?.data)
+        ? data.data
+        : [];
 
   return items
     .map((item) => {
@@ -980,11 +1060,7 @@ function extendTideEvents(tideEvents, horizonEnd) {
     nextTime = new Date(nextTime.getTime() + step);
 
     const cap =
-      nextType === 'HIGH'
-        ? lastHigh
-        : nextType === 'LOW'
-        ? lastLow
-        : null;
+      nextType === 'HIGH' ? lastHigh : nextType === 'LOW' ? lastLow : null;
     const heightText =
       cap === null || !Number.isFinite(cap)
         ? null
@@ -1043,8 +1119,8 @@ function waveDelta({ waveHeight, wavePeriod, windDirDegrees }) {
     windToShore > 0.25
       ? 'onshore'
       : windToShore < -0.25
-      ? 'offshore'
-      : 'cross-shore';
+        ? 'offshore'
+        : 'cross-shore';
   const periodText = P === null ? 'n/a' : `${P.toFixed(1)}s`;
   const detailParts = [];
   if (quality > 0) {
@@ -1165,7 +1241,11 @@ function kiteIndex({
     Math.pow(st, 0.1) *
     Math.pow(sl, 0.05);
 
-  const { delta: waveBonus, tag: waveTag, detail: waveDetail } = waveDelta({
+  const {
+    delta: waveBonus,
+    tag: waveTag,
+    detail: waveDetail,
+  } = waveDelta({
     waveHeight,
     wavePeriod,
     windDirDegrees,
@@ -1338,7 +1418,8 @@ function formatKiTooltip(score, extras = {}) {
 
   const headline = kiHeadline(score.ki);
   const waveValue = Number.isFinite(wave) ? wave.toFixed(2) : '0.00';
-  const waveSigned = Number.isFinite(wave) && wave > 0 ? `+${waveValue}` : waveValue;
+  const waveSigned =
+    Number.isFinite(wave) && wave > 0 ? `+${waveValue}` : waveValue;
 
   const kiPercent = Math.round(score.ki * 100);
   return (
@@ -1454,7 +1535,10 @@ function renderTideChart(svg, tideEvents, columns, headerCells) {
   );
   const lastObservedDate = events
     .filter((event) => !event.predicted)
-    .reduce((latest, event) => (latest && latest > event.date ? latest : event.date), null);
+    .reduce(
+      (latest, event) => (latest && latest > event.date ? latest : event.date),
+      null,
+    );
   const startLevel = tideLevelAt(tideEvents, start);
   if (startLevel) {
     events.push({
@@ -1766,13 +1850,19 @@ function renderForecast(data, tideEvents) {
 
     if (row.key === 'tide_curve') {
       const scale = tideHeights.length
-        ? { min: Math.min(...tideHeights) - 0.5, max: Math.max(...tideHeights) + 0.5 }
+        ? {
+            min: Math.min(...tideHeights) - 0.5,
+            max: Math.max(...tideHeights) + 0.5,
+          }
         : { min: 0, max: 1 };
       columns.forEach((column) => {
         const cell = document.createElement('td');
         cell.className = 'data-cell tide-curve-cell';
         if (!column.isDaylight) cell.classList.add('night-col');
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        const svg = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'svg',
+        );
         svg.setAttribute('class', 'tide-row-svg');
         const windowStart = column.time;
         const windowEnd = new Date(
@@ -1800,11 +1890,7 @@ function renderForecast(data, tideEvents) {
           { value: 28, color: '#c0392b' },
           { value: 32, color: '#7b1d6b' },
         ]);
-        const cell = buildDataCell(
-          `${Math.round(speed)}`,
-          '',
-          windColor,
-        );
+        const cell = buildDataCell(`${Math.round(speed)}`, '', windColor);
         cell.classList.add('wind-power-cell');
         if (!column.isDaylight) cell.classList.add('night-col');
         if (score.details?.wind) {
@@ -1827,11 +1913,7 @@ function renderForecast(data, tideEvents) {
           { value: 28, color: '#c0392b' },
           { value: 32, color: '#7b1d6b' },
         ]);
-        const cell = buildDataCell(
-          `${Math.round(gusts)}`,
-          '',
-          gustColor,
-        );
+        const cell = buildDataCell(`${Math.round(gusts)}`, '', gustColor);
         if (!column.isDaylight) cell.classList.add('night-col');
         if (score.details?.gust) {
           cell.title = score.details.gust;
@@ -1848,11 +1930,7 @@ function renderForecast(data, tideEvents) {
         const gfText = Number.isFinite(gustFactor)
           ? gustFactor.toFixed(1)
           : '—';
-        const cell = buildDataCell(
-          gfText,
-          '',
-          'rgba(8, 18, 28, 0.5)',
-        );
+        const cell = buildDataCell(gfText, '', 'rgba(8, 18, 28, 0.5)');
         if (!column.isDaylight) cell.classList.add('night-col');
         if (score.details?.gust) {
           cell.title = score.details.gust;
@@ -2069,25 +2147,22 @@ function renderForecast(data, tideEvents) {
     const nowIndex = columns.findIndex((column) => column.time >= now);
     const columnIndex = nowIndex >= 0 ? nowIndex : 0;
     const score = columnScores[columnIndex];
-    renderSummary(
-      data,
-      tideSeries,
-      columns[columnIndex],
-      score,
-      tideRange,
-    );
+    renderSummary(data, tideSeries, columns[columnIndex], score, tideRange);
   }
 
   // Sticky label width is handled via the 'forecast-scrolled' root class.
 }
 
 function saveCache(weather, tides, weatherUpdatedAt, tidesUpdatedAt) {
-  localStorage.setItem(cacheKeys.weather, JSON.stringify(weather));
-  localStorage.setItem(cacheKeys.tides, JSON.stringify(tides));
+  localStorage.setItem(cacheKey('weather'), JSON.stringify(weather));
+  localStorage.setItem(cacheKey('tides'), JSON.stringify(tides));
   if (weatherUpdatedAt)
-    localStorage.setItem(cacheKeys.weatherUpdatedAt, String(weatherUpdatedAt));
+    localStorage.setItem(
+      cacheKey('weatherUpdatedAt'),
+      String(weatherUpdatedAt),
+    );
   if (tidesUpdatedAt)
-    localStorage.setItem(cacheKeys.tidesUpdatedAt, String(tidesUpdatedAt));
+    localStorage.setItem(cacheKey('tidesUpdatedAt'), String(tidesUpdatedAt));
 }
 
 function alignHourlySeries(targetTimes, sourceTimes, sourceValues) {
@@ -2098,7 +2173,9 @@ function alignHourlySeries(targetTimes, sourceTimes, sourceValues) {
   sourceTimes.forEach((time, index) => {
     lookup.set(time, sourceValues?.[index] ?? null);
   });
-  return targetTimes.map((time) => (lookup.has(time) ? lookup.get(time) : null));
+  return targetTimes.map((time) =>
+    lookup.has(time) ? lookup.get(time) : null,
+  );
 }
 
 function mergeWaveData(weather, waves) {
@@ -2122,18 +2199,18 @@ function mergeWaveData(weather, waves) {
 }
 
 function saveWavesCache(waves, updatedAt) {
-  localStorage.setItem(cacheKeys.waves, JSON.stringify(waves));
+  localStorage.setItem(cacheKey('waves'), JSON.stringify(waves));
   if (updatedAt)
-    localStorage.setItem(cacheKeys.wavesUpdatedAt, String(updatedAt));
+    localStorage.setItem(cacheKey('wavesUpdatedAt'), String(updatedAt));
 }
 
 function loadCache() {
-  const weatherRaw = localStorage.getItem(cacheKeys.weather);
-  const tidesRaw = localStorage.getItem(cacheKeys.tides);
-  const wavesRaw = localStorage.getItem(cacheKeys.waves);
-  const weatherUpdatedAt = localStorage.getItem(cacheKeys.weatherUpdatedAt);
-  const tidesUpdatedAt = localStorage.getItem(cacheKeys.tidesUpdatedAt);
-  const wavesUpdatedAt = localStorage.getItem(cacheKeys.wavesUpdatedAt);
+  const weatherRaw = localStorage.getItem(cacheKey('weather'));
+  const tidesRaw = localStorage.getItem(cacheKey('tides'));
+  const wavesRaw = localStorage.getItem(cacheKey('waves'));
+  const weatherUpdatedAt = localStorage.getItem(cacheKey('weatherUpdatedAt'));
+  const tidesUpdatedAt = localStorage.getItem(cacheKey('tidesUpdatedAt'));
+  const wavesUpdatedAt = localStorage.getItem(cacheKey('wavesUpdatedAt'));
   if (!weatherRaw) return null;
   try {
     const weather = JSON.parse(weatherRaw);
@@ -2151,6 +2228,7 @@ function loadCache() {
       weatherUpdatedAt: weatherUpdatedAt || null,
       tidesUpdatedAt: tidesUpdatedAt || null,
       wavesUpdatedAt: wavesUpdatedAt || null,
+      updated: weatherUpdatedAt ? Date.parse(weatherUpdatedAt) : null,
     };
   } catch (error) {
     console.error(error);
@@ -2158,7 +2236,49 @@ function loadCache() {
   }
 }
 
+function resetForecastView() {
+  if (ui.forecastHeadRow) {
+    ui.forecastHeadRow.innerHTML = '';
+    const dateLabel = document.createElement('th');
+    dateLabel.className = 'label-cell';
+    dateLabel.dataset.fullLabel = 'Date';
+    dateLabel.dataset.abbrev = 'Date';
+    dateLabel.textContent = 'Date';
+    ui.forecastHeadRow.appendChild(dateLabel);
+  }
+
+  if (ui.forecastBody) {
+    ui.forecastBody.innerHTML = '';
+  }
+
+  if (ui.summaryBand) {
+    ui.summaryBand.dataset.verdict = '';
+    ui.summaryBand.title = '';
+  }
+
+  if (ui.summaryOverall) {
+    ui.summaryOverall.textContent = 'Loading...';
+  }
+
+  if (ui.summaryChips) {
+    ui.summaryChips.innerHTML = '';
+    ui.summaryChips.style.display = 'none';
+  }
+
+  clearTideStatus();
+  setSummaryUpdated(null, null);
+}
+
+function isCacheFresh(cached) {
+  return (
+    cached &&
+    Number.isFinite(cached.updated) &&
+    Date.now() - cached.updated < CACHE_STALE_MS
+  );
+}
+
 function renderFromCache() {
+  const locationKey = config.activeLocation;
   const cached = loadCache();
   if (!cached) {
     return false;
@@ -2172,8 +2292,9 @@ function renderFromCache() {
   if (!cached.tides || !cached.tides.length) {
     loadTides({ force: false })
       .then((res) => {
+        if (locationKey !== config.activeLocation) return;
         if (!res?.items || !res.items.length) return;
-        renderForecast(cached.weather, res.items);
+        renderForecast(mergeWaveData(cached.weather, cached.waves), res.items);
         saveCache(
           cached.weather,
           res.items,
@@ -2189,6 +2310,7 @@ function renderFromCache() {
   if (!cached.waves) {
     loadWaves({ force: false })
       .then((res) => {
+        if (locationKey !== config.activeLocation) return;
         if (!res?.data) return;
         const freshWeather = mergeWaveData(cached.weather, res.data);
         renderForecast(freshWeather, cached.tides);
@@ -2202,6 +2324,17 @@ function renderFromCache() {
   return cached;
 }
 
+function hydrateForecast(options = {}) {
+  if (options.reset) {
+    resetForecastView();
+  }
+
+  const cacheResult = renderFromCache();
+  if (!isCacheFresh(cacheResult)) {
+    loadForecast({ force: false });
+  }
+}
+
 function handleError(error) {
   setSummaryUpdated(null, null);
   console.error(error);
@@ -2209,6 +2342,7 @@ function handleError(error) {
 
 async function loadForecast(options = {}) {
   const force = options.force === true;
+  const locationKey = config.activeLocation;
 
   setLocation();
 
@@ -2227,6 +2361,7 @@ async function loadForecast(options = {}) {
     const tidesUpdatedAt = tideRes?.updatedAt || null;
     const wavesData = wavesRes?.data || null;
     const wavesUpdatedAt = wavesRes?.updatedAt || null;
+    if (locationKey !== config.activeLocation) return;
     const mergedWeather = mergeWaveData(data, wavesData);
 
     renderForecast(mergedWeather, tideItems);
@@ -2237,6 +2372,7 @@ async function loadForecast(options = {}) {
       saveWavesCache(wavesData, wavesUpdatedAt);
     }
   } catch (error) {
+    if (locationKey !== config.activeLocation) return;
     handleError(error);
   }
 }
@@ -2276,21 +2412,27 @@ if (ui.refresh) {
 }
 
 if (ui.toggleNight) {
-  ui.toggleNight.addEventListener('change', (event) => {
-    const enabled = event.target.checked;
-    document.documentElement.classList.toggle('hide-night', enabled);
+  ui.toggleNight.addEventListener('change', () => {
+    syncNightVisibility();
   });
 }
 
-setLocation();
-const cacheResult = renderFromCache();
-const cacheFresh =
-  cacheResult &&
-  cacheResult.updated &&
-  Date.now() - cacheResult.updated < CACHE_STALE_MS;
-if (!cacheFresh) {
-  loadForecast({ force: false });
+ui.locationOptions.forEach((input) => {
+  input.addEventListener('change', (event) => {
+    if (!event.target.checked) return;
+    const previousLocation = config.activeLocation;
+    applyLocation(event.target.value, { persist: true });
+    if (config.activeLocation === previousLocation) return;
+    hydrateForecast({ reset: true });
+  });
+});
+
+applyLocation(readLocationPreference());
+if (ui.toggleNight) {
+  ui.toggleNight.checked = true;
 }
+syncNightVisibility();
+hydrateForecast({ reset: true });
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
