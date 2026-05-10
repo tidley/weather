@@ -1,4 +1,4 @@
-console.log('APP.JS VERSION:', '2026-05-10-location-toggle-1');
+console.log('APP.JS VERSION:', '2026-05-10-paddleboarding-index-1');
 
 const DEFAULT_LOCATION_KEY = 'st-leonards';
 
@@ -1282,6 +1282,147 @@ function kiteIndex({
   };
 }
 
+function paddleboardingIndex({
+  windSpeed,
+  gustSpeed,
+  tideLevel,
+  tideRange,
+  isDaylightNow,
+  waveHeight,
+  wavePeriod,
+  precipitation,
+  precipitationProbability,
+}) {
+  const details = {};
+  const windValue = Number.isFinite(windSpeed) ? windSpeed : null;
+
+  let pw = 0.4;
+  if (windValue !== null) {
+    if (windValue <= 6) {
+      pw = 1;
+    } else if (windValue <= 10) {
+      pw = 1 - ((windValue - 6) / (10 - 6)) * 0.35;
+    } else if (windValue <= 16) {
+      pw = 0.65 - ((windValue - 10) / (16 - 10)) * 0.5;
+    } else if (windValue <= 20) {
+      pw = 0.15 - ((windValue - 16) / (20 - 16)) * 0.15;
+    } else {
+      pw = 0;
+    }
+  }
+  pw = clamp(pw);
+  details.wind =
+    windValue !== null
+      ? `Wind ${Math.round(windValue)} kt \u2192 P_w ${pw.toFixed(2)}`
+      : `Wind data n/a \u2192 P_w ${pw.toFixed(2)}`;
+
+  const gustFactor =
+    windValue && Number.isFinite(gustSpeed) ? gustSpeed / windValue : null;
+  let pg = 0.75;
+  if (gustFactor !== null) {
+    if (gustFactor <= 1.25) pg = 1;
+    else if (gustFactor >= 1.7) pg = 0.15;
+    else pg = 1 - ((gustFactor - 1.25) / (1.7 - 1.25)) * 0.85;
+  }
+  pg = clamp(pg);
+  details.gust =
+    gustFactor !== null
+      ? `Gust factor ${gustFactor.toFixed(2)} \u2192 P_g ${pg.toFixed(2)}`
+      : `Gust factor n/a \u2192 P_g ${pg.toFixed(2)}`;
+
+  let pWave = 0.75;
+  if (Number.isFinite(waveHeight)) {
+    const h = Math.max(0, waveHeight);
+    let heightScore = 0;
+    if (h <= 0.25) {
+      heightScore = 1;
+    } else if (h <= 0.6) {
+      heightScore = 1 - ((h - 0.25) / (0.6 - 0.25)) * 0.35;
+    } else if (h <= 1.0) {
+      heightScore = 0.65 - ((h - 0.6) / (1.0 - 0.6)) * 0.45;
+    } else if (h <= 1.4) {
+      heightScore = 0.2 - ((h - 1.0) / (1.4 - 1.0)) * 0.2;
+    }
+
+    let periodScore = 1;
+    if (Number.isFinite(wavePeriod) && h >= 0.3) {
+      if (wavePeriod < 5) {
+        periodScore = 0.65;
+      } else if (wavePeriod < 7) {
+        periodScore = 0.65 + ((wavePeriod - 5) / (7 - 5)) * 0.25;
+      }
+    }
+    pWave = clamp(heightScore * periodScore);
+  }
+  const waveHeightText = Number.isFinite(waveHeight)
+    ? `${waveHeight.toFixed(2)}m`
+    : 'n/a';
+  const wavePeriodText = Number.isFinite(wavePeriod)
+    ? `${wavePeriod.toFixed(1)}s`
+    : 'n/a';
+  details.waves = `Waves ${waveHeightText}, ${wavePeriodText} \u2192 P_wave ${pWave.toFixed(
+    2,
+  )}`;
+
+  let pt = 0.65;
+  if (tideLevel && tideRange && tideRange.max > tideRange.min) {
+    const tNorm = clamp(
+      (tideLevel.height - tideRange.min) / (tideRange.max - tideRange.min),
+    );
+    const target = 0.62;
+    pt = Math.max(0.3, clamp(1 - Math.abs(tNorm - target) / 0.62));
+  }
+  if (tideLevel && tideRange && tideRange.max > tideRange.min) {
+    details.tide = `Tide ${tideLevel.height.toFixed(2)}m (range ${tideRange.min.toFixed(
+      2,
+    )}-${tideRange.max.toFixed(2)}m) \u2192 P_t ${pt.toFixed(2)}`;
+  } else {
+    details.tide = `Tide data n/a \u2192 P_t ${pt.toFixed(2)}`;
+  }
+
+  const pl = isDaylightNow ? 1 : 0;
+  details.daylight = `${
+    isDaylightNow ? 'Daylight' : 'Night'
+  } \u2192 P_l ${pl.toFixed(2)}`;
+
+  const rainMm = Number.isFinite(precipitation) ? precipitation : null;
+  const rainProb = Number.isFinite(precipitationProbability)
+    ? precipitationProbability
+    : null;
+  const amountScore = rainMm === null ? 1 : clamp(1 - rainMm / 2.5);
+  const probabilityScore =
+    rainProb === null ? 1 : clamp(1 - (Math.max(0, rainProb - 40) / 60) * 0.4);
+  const pr = Math.min(amountScore, probabilityScore);
+  details.rain = `Rain ${
+    rainMm === null ? 'n/a' : `${rainMm.toFixed(1).replace(/\.0$/, '')}mm`
+  }, ${rainProb === null ? 'n/a' : `${Math.round(rainProb)}%`} \u2192 P_r ${pr.toFixed(
+    2,
+  )}`;
+
+  const pi = clamp(
+    Math.pow(pw, 0.38) *
+      Math.pow(pg, 0.17) *
+      Math.pow(pWave, 0.28) *
+      Math.pow(pt, 0.07) *
+      Math.pow(pr, 0.04) *
+      Math.pow(pl, 0.06),
+  );
+
+  let stars = 0;
+  if (pi >= 0.8) stars = 5;
+  else if (pi >= 0.65) stars = 4;
+  else if (pi >= 0.5) stars = 3;
+  else if (pi >= 0.35) stars = 2;
+
+  return {
+    pi,
+    stars,
+    gustFactor,
+    scores: { pw, pg, pWave, pt, pr, pl },
+    details,
+  };
+}
+
 function buildHeaderCell(time, isDaylightNow) {
   const cell = document.createElement('th');
   cell.className = 'data-cell';
@@ -1354,6 +1495,15 @@ function kiHeadline(ki) {
   if (ki >= 0.5) return 'Decent conditions';
   if (ki >= 0.35) return 'Mixed conditions';
   return 'Poor conditions';
+}
+
+function piHeadline(pi) {
+  if (!Number.isFinite(pi)) return 'No data';
+  if (pi >= 0.8) return 'Excellent paddle conditions';
+  if (pi >= 0.65) return 'Good paddle conditions';
+  if (pi >= 0.5) return 'Usable with care';
+  if (pi >= 0.35) return 'Marginal paddle conditions';
+  return 'Poor paddle conditions';
 }
 
 function formatWaveReason(detail) {
@@ -1454,6 +1604,93 @@ function formatKiTooltip(score, extras = {}) {
     `KI = clamp(\n` +
     `  (S_w^0.35 × S_g^0.30 × S_d^0.20 × S_t^0.10 × S_l^0.05)\n` +
     `  + Δ_wave\n` +
+    `)`
+  );
+}
+
+function formatPiTooltip(score, extras = {}) {
+  const pw = score.scores?.pw;
+  const pg = score.scores?.pg;
+  const pWave = score.scores?.pWave;
+  const pt = score.scores?.pt;
+  const pr = score.scores?.pr;
+  const pl = score.scores?.pl;
+
+  const windSpeedText = Number.isFinite(extras.windSpeed)
+    ? `${Math.round(extras.windSpeed)} kt`
+    : 'n/a';
+  const gustFactorText = Number.isFinite(score.gustFactor)
+    ? score.gustFactor.toFixed(2)
+    : 'n/a';
+  const waveText = Number.isFinite(extras.waveHeight)
+    ? `${extras.waveHeight.toFixed(1)}m${
+        Number.isFinite(extras.wavePeriod)
+          ? ` / ${extras.wavePeriod.toFixed(1)}s`
+          : ''
+      }`
+    : 'n/a';
+  const tideText =
+    Number.isFinite(extras.tideHeight) &&
+    Number.isFinite(extras.tideMin) &&
+    Number.isFinite(extras.tideMax)
+      ? `${extras.tideHeight.toFixed(2)}m (${extras.tideMin.toFixed(
+          2,
+        )}-${extras.tideMax.toFixed(2)}m)`
+      : 'n/a';
+  const rainText =
+    Number.isFinite(extras.precipitation) ||
+    Number.isFinite(extras.precipitationProbability)
+      ? `${
+          Number.isFinite(extras.precipitation)
+            ? `${extras.precipitation.toFixed(1).replace(/\.0$/, '')}mm`
+            : 'n/a'
+        }, ${
+          Number.isFinite(extras.precipitationProbability)
+            ? `${Math.round(extras.precipitationProbability)}%`
+            : 'n/a'
+        }`
+      : 'n/a';
+  const daylightText = extras.isDaylightNow ? 'daytime' : 'night';
+
+  const windClass = classifyScore(pw);
+  const gustClass = classifyScore(pg);
+  const waveClass = classifyScore(pWave);
+  const tideClass = classifyScore(pt);
+  const rainClass = classifyScore(pr);
+  const daylightClass = classifyScore(pl);
+  const piPercent = Math.round(score.pi * 100);
+
+  return (
+    `Paddleboarding Index: ${piPercent}%  ${starText(score.stars)}\n` +
+    `${piHeadline(score.pi)}\n\n` +
+    `Main factors:\n` +
+    `• ${waveClass.icon} Waves: ${Number.isFinite(pWave) ? pWave.toFixed(2) : '—'} (${waveText})\n` +
+    `• ${windClass.icon} Wind: ${Number.isFinite(pw) ? pw.toFixed(2) : '—'} (${windSpeedText})\n` +
+    `• ${gustClass.icon} Gusts: ${Number.isFinite(pg) ? pg.toFixed(2) : '—'} (${gustSummary(
+      score.gustFactor,
+    )})\n\n` +
+    `Score breakdown:\n` +
+    `Calm wind: ${Number.isFinite(pw) ? pw.toFixed(2) : '—'} ${
+      windClass.label
+    } (${windSpeedText})\n` +
+    `Gust steadiness: ${Number.isFinite(pg) ? pg.toFixed(2) : '—'} ${
+      gustClass.label
+    } (${gustFactorText})\n` +
+    `Flat water: ${Number.isFinite(pWave) ? pWave.toFixed(2) : '—'} ${
+      waveClass.label
+    } (${waveText})\n` +
+    `Tide suitability: ${Number.isFinite(pt) ? pt.toFixed(2) : '—'} ${
+      tideClass.label
+    } (${tideText})\n` +
+    `Rain comfort: ${Number.isFinite(pr) ? pr.toFixed(2) : '—'} ${
+      rainClass.label
+    } (${rainText})\n` +
+    `Daylight: ${Number.isFinite(pl) ? pl.toFixed(2) : '—'} ${
+      daylightClass.label
+    } (${daylightText})\n\n` +
+    `Formula:\n` +
+    `PI = clamp(\n` +
+    `  P_w^0.38 × P_g^0.17 × P_wave^0.28 × P_t^0.07 × P_r^0.04 × P_l^0.06\n` +
     `)`
   );
 }
@@ -1747,6 +1984,7 @@ function renderForecast(data, tideEvents) {
   const rows = [
     { label: 'Time', abbrev: 'Time', key: 'time' },
     { label: 'KI', abbrev: 'KI', key: 'ki' },
+    { label: 'PI', abbrev: 'PI', key: 'pi' },
     { label: 'Temp (°C)', abbrev: 'Temp', key: 'temperature_2m' },
     { label: 'Wind (kt)', abbrev: 'Wind', key: 'wind_speed' },
     { label: 'Gusts (kt)', abbrev: 'Gusts', key: 'wind_gusts' },
@@ -1786,7 +2024,29 @@ function renderForecast(data, tideEvents) {
     });
   });
 
-  // No demo data; show real KI only.
+  const paddleScores = columns.map((column) => {
+    const windSpeed = data.hourly.wind_speed_10m[column.index];
+    const gustSpeed = data.hourly.wind_gusts_10m[column.index];
+    const waveHeight = data.hourly.wave_height?.[column.index];
+    const wavePeriod = data.hourly.wave_period?.[column.index];
+    const precipitation = data.hourly.precipitation?.[column.index];
+    const precipitationProbability =
+      data.hourly.precipitation_probability?.[column.index];
+    const tideLevel = tideLevelAt(tideSeries, column.time);
+    return paddleboardingIndex({
+      windSpeed,
+      gustSpeed,
+      tideLevel,
+      tideRange,
+      isDaylightNow: isDaylight(column.time, config.latitude, config.longitude),
+      waveHeight,
+      wavePeriod,
+      precipitation,
+      precipitationProbability,
+    });
+  });
+
+  // No demo data; show real scores only.
 
   const headerCells = Array.from(
     ui.forecastHeadRow.querySelectorAll('th.data-cell'),
@@ -1839,6 +2099,9 @@ function renderForecast(data, tideEvents) {
     }
     if (row.key === 'ki') {
       label.title = 'Kiteability Index (0-100%)';
+    }
+    if (row.key === 'pi') {
+      label.title = 'Paddleboarding Index (0-100%)';
     }
     if (row.key === 'tide_curve') {
       label.title = 'Dark region indicates predicted tides';
@@ -2115,6 +2378,43 @@ function renderForecast(data, tideEvents) {
         cell.title = formatKiTooltip(score, {
           windSpeed: data.hourly.wind_speed_10m[column.index],
           windDirDegrees: data.hourly.wind_direction_10m[column.index],
+          tideHeight: tideLevel?.height ?? null,
+          tideMin: tideRange?.min ?? null,
+          tideMax: tideRange?.max ?? null,
+          isDaylightNow: isDaylight(
+            column.time,
+            config.latitude,
+            config.longitude,
+          ),
+        });
+        tr.appendChild(cell);
+        return;
+      }
+
+      if (row.key === 'pi') {
+        const score = paddleScores[colIndex];
+        const piPercent = Math.round(score.pi * 100);
+        const cell = buildDataCell(
+          `${piPercent}%`,
+          '',
+          colorForValue(score.pi, [
+            { value: 0, color: '#0a1828' },
+            { value: 0.35, color: '#1e4e9c' },
+            { value: 0.5, color: '#20736b' },
+            { value: 0.65, color: '#3c9860' },
+            { value: 0.8, color: '#7ed957' },
+          ]),
+        );
+        cell.classList.add('pi-cell');
+        if (!column.isDaylight) cell.classList.add('night-col');
+        const tideLevel = tideLevelAt(tideSeries, column.time);
+        cell.title = formatPiTooltip(score, {
+          windSpeed: data.hourly.wind_speed_10m[column.index],
+          waveHeight: data.hourly.wave_height?.[column.index],
+          wavePeriod: data.hourly.wave_period?.[column.index],
+          precipitation: data.hourly.precipitation?.[column.index],
+          precipitationProbability:
+            data.hourly.precipitation_probability?.[column.index],
           tideHeight: tideLevel?.height ?? null,
           tideMin: tideRange?.min ?? null,
           tideMax: tideRange?.max ?? null,

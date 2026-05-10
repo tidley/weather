@@ -6,7 +6,7 @@ Simple weather dashboard aimed at quick kitesurfing checks for St Leonards and H
 
 - Open-Meteo weather + marine (waves) integration with server-side caching.
 - Tide feed via UKHO, cached locally with coverage extension.
-- Kiteability Index (KI) displayed as 0–100% with detailed hover breakdown.
+- Kiteability Index (KI) and Paddleboarding Index (PI) displayed as 0–100% with detailed hover breakdowns.
 - Dense, Windguru-style forecast table:
   - Separate rows for wind, gusts, gust factor, direction, waves, rain, sky, moon, tide, and tide curve.
   - Date row uses alternating day stripes; Time row uses time-of-day shading.

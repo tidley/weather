@@ -662,12 +662,14 @@ h2 {
   font-size: 0.72rem;
 }
 
-.ki-cell .cell-main {
+.ki-cell .cell-main,
+.pi-cell .cell-main {
   font-size: 0.95rem;
   font-weight: 600;
 }
 
-.ki-cell .cell-sub {
+.ki-cell .cell-sub,
+.pi-cell .cell-sub {
   font-size: 0.74rem;
 }
 
@@ -679,9 +681,11 @@ h2 {
 }
 
 .ki-cell .cell-main,
-.ki-cell .cell-sub {
+.ki-cell .cell-sub,
+.pi-cell .cell-main,
+.pi-cell .cell-sub {
   font-family: var(--mono);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .score-0 .cell-main {
