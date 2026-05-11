@@ -24,15 +24,69 @@
       <p class="summary-updated topbar-updated" id="summary-updated">Weather — · Tides —</p>
     </header>
 
-    <section class="summary-bar" aria-live="polite">
-      <div class="summary-tile" id="decision-band">
-        <div class="summary-grid">
-          <div class="summary-item summary-overall-line">
-            <span class="summary-title">OVERALL</span>
+    <section class="summary-bar decision-panel" aria-live="polite">
+      <article class="summary-tile score-hero" id="decision-band">
+        <div>
+          <span class="summary-title">Overall</span>
+          <div class="score-line">
             <span id="summary-overall">—</span>
+            <span class="score-percent" id="summary-ki-score">—</span>
           </div>
         </div>
+        <div class="score-secondary">
+          <span id="summary-pi-score">PI —</span>
+          <span id="summary-daylight">—</span>
+        </div>
         <div class="chips-row" id="summary-chips"></div>
+      </article>
+
+      <div class="condition-strip">
+        <article class="condition-card">
+          <span class="summary-title">Wind avg</span>
+          <strong id="summary-wind">—</strong>
+          <span class="condition-sub">
+            <span id="summary-direction">—</span>
+            <span id="summary-direction-icon" aria-hidden="true"></span>
+          </span>
+        </article>
+
+        <article class="condition-card">
+          <span class="summary-title">Gusts max</span>
+          <strong><span id="summary-gusts">—</span> kt</strong>
+          <span class="condition-sub">
+            <span id="summary-gust-quality">—</span>
+            <span id="summary-gust-factor">—</span>
+          </span>
+        </article>
+
+        <article class="condition-card">
+          <span class="summary-title">Direction safety</span>
+          <strong id="summary-direction-safety">—</strong>
+          <span class="condition-sub" id="summary-direction-detail">—</span>
+        </article>
+
+        <article class="condition-card">
+          <span class="summary-title">Tide usability</span>
+          <strong id="summary-tide-usability">—</strong>
+          <span class="condition-sub" id="summary-tide"><span>—</span></span>
+        </article>
+
+        <article class="condition-card condition-card-wide">
+          <div class="session-row">
+            <span class="summary-title">Best windows</span>
+            <strong id="summary-best-windows">—</strong>
+          </div>
+          <div class="session-row">
+            <span class="summary-title">Main issue</span>
+            <span id="summary-main-issue">—</span>
+          </div>
+        </article>
+      </div>
+
+      <div class="summary-hidden-metrics" aria-hidden="true">
+        <span id="summary-temp">—</span>
+        <span id="summary-waves"><span>—</span></span>
+        <span id="summary-rain"><span>—</span></span>
       </div>
     </section>
 
@@ -71,6 +125,15 @@
           </thead>
           <tbody id="forecast-body"></tbody>
         </table>
+      </div>
+      <div class="forecast-legend" aria-label="Forecast colour key">
+        <span class="legend-label">Key</span>
+        <span class="legend-item"><span class="legend-dot excellent"></span>Excellent (80–100%)</span>
+        <span class="legend-item"><span class="legend-dot good"></span>Good (60–79%)</span>
+        <span class="legend-item"><span class="legend-dot marginal"></span>Marginal (40–59%)</span>
+        <span class="legend-item"><span class="legend-dot poor"></span>Poor (20–39%)</span>
+        <span class="legend-item"><span class="legend-dot very-poor"></span>Very poor (0–19%)</span>
+        <span class="legend-note">KI prioritises kite safety; PI prioritises calm paddle conditions.</span>
       </div>
     </section>
 
