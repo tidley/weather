@@ -1,4 +1,4 @@
-console.log('APP.JS VERSION:', '2026-05-10-paddleboarding-index-1');
+console.log('APP.JS VERSION:', '2026-05-13-hayle-tide-mobile-1');
 
 const DEFAULT_LOCATION_KEY = 'st-leonards';
 
@@ -11,6 +11,7 @@ const locations = {
     tideStationId: '0085',
     tideStationName: 'Hastings',
     shoreNormalDeg: 180,
+    kiteTideMode: 'low',
   },
   hayle: {
     label: 'Hayle',
@@ -20,6 +21,7 @@ const locations = {
     tideStationId: '0547',
     tideStationName: 'St. Ives',
     shoreNormalDeg: 0,
+    kiteTideMode: 'high',
   },
 };
 
@@ -31,6 +33,7 @@ const config = {
   latitude: defaultLocation.latitude,
   longitude: defaultLocation.longitude,
   shoreNormalDeg: defaultLocation.shoreNormalDeg,
+  kiteTideMode: defaultLocation.kiteTideMode || 'low',
   timezone: 'Europe/London',
   windSpeedUnit: 'kn',
   forecastWindowHours: 2,
@@ -325,6 +328,7 @@ function applyLocation(locationKey, options = {}) {
   config.latitude = location.latitude;
   config.longitude = location.longitude;
   config.shoreNormalDeg = location.shoreNormalDeg;
+  config.kiteTideMode = location.kiteTideMode || 'low';
   config.tide.stationId = location.tideStationId;
   config.tide.stationName = location.tideStationName;
 
@@ -756,12 +760,22 @@ function renderSummary(
   const temp = data.hourly.temperature_2m?.[idx];
   const rainProb = data.hourly.precipitation_probability?.[idx];
   const rainMm = data.hourly.precipitation?.[idx];
-  const tideLevel = tideLevelAt(tideSeries, column.time);
+  const tideScoreTime = forecastWindowMidpoint(
+    column.time,
+    config.forecastWindowHours,
+  );
+  const tideLevel = tideLevelAt(tideSeries, tideScoreTime);
   const kiPct = Math.round(score.ki * 100);
   const piPct = paddleScore ? Math.round(paddleScore.pi * 100) : null;
   const verdict = kiteVerdictFromScore(score.ki);
   const gust = gustQuality(gustFactor);
-  const tideUse = tideUsability(score, tideLevel, tideRange, tideSeries, column.time);
+  const tideUse = tideUsability(
+    score,
+    tideLevel,
+    tideRange,
+    tideSeries,
+    tideScoreTime,
+  );
   const mainIssue = mainIssueForColumn({
     score,
     wind,
@@ -1109,6 +1123,46 @@ function tideLevelAt(tideEvents, time) {
   };
 }
 
+const HIGH_TIDE_OPTIMUM_HOURS = 1;
+const HIGH_TIDE_FADE_HOURS = 6;
+
+function nearestHighTide(tideEvents, time) {
+  const targetMs = time instanceof Date ? time.getTime() : Number.NaN;
+  if (!Number.isFinite(targetMs)) return null;
+  const highs = tideEvents
+    .filter(
+      (event) =>
+        event.type === 'HIGH' &&
+        event.date instanceof Date &&
+        !Number.isNaN(event.date.getTime()),
+    )
+    .sort((a, b) => {
+      const aDelta = Math.abs(a.date.getTime() - targetMs);
+      const bDelta = Math.abs(b.date.getTime() - targetMs);
+      return aDelta - bDelta;
+    });
+  return highs[0] || null;
+}
+
+function highTideWindowScore(tideEvents, time) {
+  if (!(time instanceof Date) || Number.isNaN(time.getTime())) return null;
+  const high = nearestHighTide(tideEvents, time);
+  if (!high) return null;
+  const hoursFromHigh =
+    Math.abs(high.date.getTime() - time.getTime()) / (60 * 60 * 1000);
+  const raw =
+    hoursFromHigh <= HIGH_TIDE_OPTIMUM_HOURS
+      ? 1
+      : 1 -
+        (hoursFromHigh - HIGH_TIDE_OPTIMUM_HOURS) /
+          (HIGH_TIDE_FADE_HOURS - HIGH_TIDE_OPTIMUM_HOURS);
+  return {
+    score: Math.max(0.3, clamp(raw)),
+    nearestHigh: high,
+    hoursFromHigh,
+  };
+}
+
 function median(values) {
   const nums = values.filter((v) => Number.isFinite(v)).sort((a, b) => a - b);
   if (!nums.length) return null;
@@ -1360,6 +1414,9 @@ function kiteIndex({
   shoreNormalDeg = config.shoreNormalDeg ?? DEFAULT_SHORE_NORMAL_DEG,
   tideLevel,
   tideRange,
+  tideEvents = [],
+  tideTime,
+  tideMode = config.kiteTideMode || 'low',
   isDaylightNow,
   waveHeight,
   wavePeriod,
@@ -1412,7 +1469,18 @@ function kiteIndex({
   )}`;
 
   let st = 0.5;
-  if (tideLevel && tideRange && tideRange.max > tideRange.min) {
+  let tideTiming = null;
+  const scoringTime =
+    tideTime instanceof Date && !Number.isNaN(tideTime.getTime())
+      ? tideTime
+      : null;
+  if (tideMode === 'high' && scoringTime) {
+    tideTiming = highTideWindowScore(tideEvents, scoringTime);
+    if (tideTiming) {
+      st = tideTiming.score;
+    }
+  }
+  if (!tideTiming && tideLevel && tideRange && tideRange.max > tideRange.min) {
     const tNorm = clamp(
       (tideLevel.height - tideRange.min) / (tideRange.max - tideRange.min),
     );
@@ -1420,12 +1488,29 @@ function kiteIndex({
     st = clamp(1 - Math.abs(tNorm - target) / 0.5);
   }
   st = Math.max(0.3, st);
-  reasons.push(`S_t tide: ${st.toFixed(2)} (prefers low)`);
-  if (tideLevel && tideRange && tideRange.max > tideRange.min) {
+  if (tideTiming) {
+    const highTime = formatTideTime.format(tideTiming.nearestHigh.date);
+    const highOffset = tideTiming.hoursFromHigh.toFixed(1);
+    const windowText =
+      tideTiming.hoursFromHigh <= HIGH_TIDE_OPTIMUM_HOURS
+        ? 'inside high-tide window'
+        : `${highOffset}h from high`;
+    reasons.push(
+      `S_t tide: ${st.toFixed(2)} (high tide ±${HIGH_TIDE_OPTIMUM_HOURS}h optimum; ${windowText})`,
+    );
+    const tideHeightText = Number.isFinite(tideLevel?.height)
+      ? `; tide ${tideLevel.height.toFixed(2)}m`
+      : '';
+    details.tide = `Nearest high ${highTime} (${highOffset}h away${tideHeightText}) \u2192 S_t ${st.toFixed(
+      2,
+    )}`;
+  } else if (tideLevel && tideRange && tideRange.max > tideRange.min) {
+    reasons.push(`S_t tide: ${st.toFixed(2)} (prefers low)`);
     details.tide = `Tide ${tideLevel.height.toFixed(2)}m (range ${tideRange.min.toFixed(
       2,
     )}-${tideRange.max.toFixed(2)}m) \u2192 S_t ${st.toFixed(2)}`;
   } else {
+    reasons.push(`S_t tide: ${st.toFixed(2)} (data n/a)`);
     details.tide = `Tide data n/a \u2192 S_t ${st.toFixed(2)}`;
   }
 
@@ -1483,6 +1568,7 @@ function kiteIndex({
     gustFactor,
     scores: { sw, sg, sd, st, sl, waveBonus },
     directionSafety,
+    tideTiming,
     details,
   };
 }
@@ -1653,6 +1739,10 @@ function buildTimeCell(time) {
   return buildDataCell(hour, '', timeGradient(time));
 }
 
+function forecastWindowMidpoint(start, windowHours) {
+  return new Date(start.getTime() + (windowHours * 60 * 60 * 1000) / 2);
+}
+
 function buildDataCell(mainText, subText, background) {
   const cell = document.createElement('td');
   cell.className = 'data-cell';
@@ -1670,6 +1760,18 @@ function buildDataCell(mainText, subText, background) {
   wrapper.append(main, sub);
   cell.appendChild(wrapper);
   return cell;
+}
+
+function setLabelCellText(cell, fullLabel, abbrev = fullLabel) {
+  cell.dataset.fullLabel = fullLabel;
+  cell.dataset.abbrev = abbrev;
+  const full = document.createElement('span');
+  full.className = 'label-text label-full';
+  full.textContent = fullLabel;
+  const short = document.createElement('span');
+  short.className = 'label-text label-abbrev';
+  short.textContent = abbrev;
+  cell.replaceChildren(full, short);
 }
 
 function decorateForecastCell(cell, column) {
@@ -1790,6 +1892,7 @@ function tideUsability(score, tideLevel, tideRange, tideEvents, time) {
   const value = score?.scores?.st;
   const trend = tideTrendAt(tideEvents, time);
   const band = tideLabel(tideLevel, tideRange) || 'Tide n/a';
+  const highTiming = score?.tideTiming;
   let label = 'Constrained';
   let kind = 'poor';
   if (Number.isFinite(value)) {
@@ -1801,7 +1904,12 @@ function tideUsability(score, tideLevel, tideRange, tideEvents, time) {
       kind = 'marginal';
     }
   }
-  const detail = [trend, band].filter(Boolean).join(' & ');
+  const highDetail = highTiming
+    ? highTiming.hoursFromHigh <= HIGH_TIDE_OPTIMUM_HOURS
+      ? 'near high'
+      : `${highTiming.hoursFromHigh.toFixed(1)}h from high`
+    : null;
+  const detail = [highDetail || trend, band].filter(Boolean).join(' & ');
   return { label, detail: detail || 'n/a', kind };
 }
 
@@ -1940,6 +2048,7 @@ function formatKiTooltip(score, extras = {}) {
           2,
         )}-${extras.tideMax.toFixed(2)}m)`
       : 'n/a';
+  const tideDetailText = score.details?.tide || tideText;
   const daylightText = extras.isDaylightNow ? 'daytime' : 'night';
   const waveReason = formatWaveReason(score.details?.waves);
   const directionSafetyText = score.directionSafety?.detail || directionSummary(sd);
@@ -1978,7 +2087,7 @@ function formatKiTooltip(score, extras = {}) {
     } (${directionSafetyText}, ${directionText})\n` +
     `Tide suitability: ${Number.isFinite(st) ? st.toFixed(2) : '—'} ${
       stClass.label
-    } (${tideText})\n` +
+    } (${tideDetailText})\n` +
     `Daylight: ${Number.isFinite(sl) ? sl.toFixed(2) : '—'} ${
       slClass.label
     } (${daylightText})\n` +
@@ -2328,9 +2437,7 @@ function renderForecast(data, tideEvents) {
   ui.forecastBody.innerHTML = '';
   const dateLabel = document.createElement('th');
   dateLabel.className = 'label-cell';
-  dateLabel.dataset.fullLabel = 'Date';
-  dateLabel.dataset.abbrev = 'Date';
-  dateLabel.textContent = 'Date';
+  setLabelCellText(dateLabel, 'Date', 'Date');
   ui.forecastHeadRow.appendChild(dateLabel);
 
   const times = data.hourly.time.map((time) => new Date(time));
@@ -2372,22 +2479,22 @@ function renderForecast(data, tideEvents) {
 
   const rows = [
     { label: 'Time', abbrev: 'Time', key: 'time' },
-    { label: 'A  Rideability', abbrev: 'Ride', key: 'section_rideability', section: true },
+    { label: 'Rideability', abbrev: 'Ride', key: 'section_rideability', section: true },
     { label: 'KI / score', abbrev: 'KI', key: 'ki' },
     { label: 'PI / paddle', abbrev: 'PI', key: 'pi' },
     { label: 'Daylight', abbrev: 'Light', key: 'daylight' },
-    { label: 'B  Wind', abbrev: 'Wind', key: 'section_wind', section: true },
-    { label: 'Wind (kt)', abbrev: 'Wind', key: 'wind_speed' },
+    { label: 'Wind', abbrev: 'Wind', key: 'section_wind', section: true },
+    { label: 'Wind (kt)', abbrev: 'Speed', key: 'wind_speed' },
     { label: 'Gusts (kt)', abbrev: 'Gusts', key: 'wind_gusts' },
     { label: 'Gust quality', abbrev: 'Gust Q', key: 'gust_quality' },
     { label: 'Gust factor', abbrev: 'GF', key: 'gust_factor' },
     { label: 'Direction safety', abbrev: 'Safety', key: 'direction_safety' },
     { label: 'Direction', abbrev: 'Dir', key: 'wind_direction_10m' },
-    { label: 'C  Water', abbrev: 'Water', key: 'section_water', section: true },
+    { label: 'Water', abbrev: 'Water', key: 'section_water', section: true },
     { label: 'Tide usability', abbrev: 'Tide', key: 'tide' },
     { label: 'Tide curve', abbrev: 'Curve', key: 'tide_curve' },
     { label: 'Waves (m)', abbrev: 'Wave', key: 'wave' },
-    { label: 'D  Weather', abbrev: 'Weather', key: 'section_weather', section: true },
+    { label: 'Weather', abbrev: 'Weather', key: 'section_weather', section: true },
     { label: 'Temp (°C)', abbrev: 'Temp', key: 'temperature_2m' },
     { label: 'Rain (mm)', abbrev: 'Rain', key: 'precipitation' },
     { label: 'Sky', abbrev: 'Sky', key: 'sky' },
@@ -2406,7 +2513,8 @@ function renderForecast(data, tideEvents) {
     const degrees = data.hourly.wind_direction_10m[column.index];
     const waveHeight = data.hourly.wave_height?.[column.index];
     const wavePeriod = data.hourly.wave_period?.[column.index];
-    const tideLevel = tideLevelAt(tideSeries, column.time);
+    const tideScoreTime = forecastWindowMidpoint(column.time, windowSize);
+    const tideLevel = tideLevelAt(tideSeries, tideScoreTime);
     return kiteIndex({
       windSpeed,
       gustSpeed,
@@ -2414,6 +2522,9 @@ function renderForecast(data, tideEvents) {
       shoreNormalDeg: config.shoreNormalDeg,
       tideLevel,
       tideRange,
+      tideEvents: tideSeries,
+      tideTime: tideScoreTime,
+      tideMode: config.kiteTideMode,
       isDaylightNow: isDaylight(column.time, config.latitude, config.longitude),
       waveHeight,
       wavePeriod,
@@ -2459,7 +2570,10 @@ function renderForecast(data, tideEvents) {
       const score = columnScores[index];
       const windSpeed = data.hourly.wind_speed_10m[columns[index].index];
       const degrees = data.hourly.wind_direction_10m[columns[index].index];
-      const tideLevel = tideLevelAt(tideSeries, columns[index].time);
+      const tideLevel = tideLevelAt(
+        tideSeries,
+        forecastWindowMidpoint(columns[index].time, windowSize),
+      );
       cell.title = formatKiTooltip(score, {
         windSpeed,
         windDirDegrees: degrees,
@@ -2482,9 +2596,7 @@ function renderForecast(data, tideEvents) {
     }
     const label = document.createElement('th');
     label.className = 'label-cell';
-    label.dataset.fullLabel = row.label;
-    label.dataset.abbrev = row.abbrev || row.label;
-    label.textContent = row.label;
+    setLabelCellText(label, row.label, row.abbrev || row.label);
     if (row.key === 'precipitation') {
       label.title = 'Precipitation probability (%) and amount';
     }
@@ -2715,13 +2827,14 @@ function renderForecast(data, tideEvents) {
         );
         const tideText = tideForWindow(tideSeries, windowStart, windowEnd);
         const score = columnScores[colIndex];
-        const tideLevel = tideLevelAt(tideSeries, column.time);
+        const tideScoreTime = forecastWindowMidpoint(column.time, windowSize);
+        const tideLevel = tideLevelAt(tideSeries, tideScoreTime);
         const usability = tideUsability(
           score,
           tideLevel,
           tideRange,
           tideSeries,
-          column.time,
+          tideScoreTime,
         );
         const cell = buildDataCell(usability.label, tideText);
         cell.classList.add('tide-cell');
@@ -2858,7 +2971,10 @@ function renderForecast(data, tideEvents) {
         cell.classList.add('ki-cell', `band-${scoreBand(ki)}`);
         decorateForecastCell(cell, column);
         const score = columnScores[colIndex];
-        const tideLevel = tideLevelAt(tideSeries, column.time);
+        const tideLevel = tideLevelAt(
+          tideSeries,
+          forecastWindowMidpoint(column.time, windowSize),
+        );
         cell.title = formatKiTooltip(score, {
           windSpeed: data.hourly.wind_speed_10m[column.index],
           windDirDegrees: data.hourly.wind_direction_10m[column.index],

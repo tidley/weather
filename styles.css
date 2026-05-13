@@ -1353,6 +1353,20 @@ h1::after {
   font-size: 0.72rem;
   letter-spacing: 0;
   text-transform: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.label-text {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.label-abbrev {
+  display: none;
 }
 
 .forecast-grid thead .label-cell {
@@ -1652,15 +1666,18 @@ h1::after {
     min-width: 104px;
     max-width: 104px;
     padding-left: 10px;
-    font-size: 0;
-  }
-
-  .label-cell::after {
-    content: attr(data-abbrev);
     font-size: 0.64rem;
   }
 
-  .forecast-section-row .label-cell::after {
+  .label-full {
+    display: none;
+  }
+
+  .label-abbrev {
+    display: inline-block;
+  }
+
+  .forecast-section-row .label-cell {
     font-size: 0.66rem;
   }
 
