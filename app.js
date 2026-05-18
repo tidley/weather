@@ -158,8 +158,10 @@ const formatHeaderHour = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
 });
 
-const formatWindowDay = new Intl.DateTimeFormat('en-GB', {
+const formatSessionDate = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',
+  day: '2-digit',
+  month: 'short',
 });
 
 const formatWindowTime = new Intl.DateTimeFormat('en-GB', {
@@ -479,11 +481,20 @@ function colorForValue(value, stops) {
     return 'transparent';
   }
   const sorted = [...stops].sort((a, b) => a.value - b.value);
-  let chosen = sorted[0];
-  for (const stop of sorted) {
-    if (value >= stop.value) chosen = stop;
+  if (!sorted.length) return 'transparent';
+  if (value <= sorted[0].value) return sorted[0].color;
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const previous = sorted[i - 1];
+    const next = sorted[i];
+    if (value <= next.value) {
+      const span = next.value - previous.value;
+      const t = span > 0 ? (value - previous.value) / span : 0;
+      return lerpColor(previous.color, next.color, t);
+    }
   }
-  return chosen.color;
+
+  return sorted[sorted.length - 1].color;
 }
 
 function qualityBackground(kind) {
@@ -1913,10 +1924,22 @@ function tideUsability(score, tideLevel, tideRange, tideEvents, time) {
   return { label, detail: detail || 'n/a', kind };
 }
 
+function sameLocalDate(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
 function formatSessionRange(start, end) {
-  return `${formatWindowDay.format(start)} ${formatWindowTime.format(
+  const startText = `${formatSessionDate.format(start)} ${formatWindowTime.format(
     start,
-  )}-${formatWindowTime.format(end)}`;
+  )}`;
+  const endText = sameLocalDate(start, end)
+    ? formatWindowTime.format(end)
+    : `${formatSessionDate.format(end)} ${formatWindowTime.format(end)}`;
+  return `${startText}-${endText}`;
 }
 
 function bestWindowsForScores(columns, scores, scoreKey, threshold, windowSize) {
@@ -1933,17 +1956,21 @@ function bestWindowsForScores(columns, scores, scoreKey, threshold, windowSize) 
       return;
     }
 
-    const dayKey = column.time.toDateString();
-    if (!current || current.dayKey !== dayKey) {
+    const isContinuous =
+      current &&
+      sameLocalDate(current.start, column.time) &&
+      column.index - current.lastIndex === windowSize;
+    if (!isContinuous) {
       if (current) groups.push(current);
       current = {
-        dayKey,
         start: column.time,
         end: column.time,
+        lastIndex: column.index,
         values: [],
       };
     }
     current.end = column.time;
+    current.lastIndex = column.index;
     current.values.push(value);
   });
   if (current) groups.push(current);
@@ -1957,7 +1984,8 @@ function bestWindowsForScores(columns, scores, scoreKey, threshold, windowSize) 
         Math.max(1, group.values.length),
     }))
     .sort((a, b) => b.avg - a.avg || a.start - b.start)
-    .slice(0, 2);
+    .slice(0, 2)
+    .sort((a, b) => a.start - b.start);
 }
 
 function summarizeSessionWindows(columns, kiteScores, paddleScores, windowSize) {
@@ -1977,10 +2005,10 @@ function summarizeSessionWindows(columns, kiteScores, paddleScores, windowSize) 
   );
 
   const kiText = kiWindows.length
-    ? `KI ${kiWindows.map((item) => formatSessionRange(item.start, item.end)).join(' · ')}`
+    ? `KI ${kiWindows.map((item) => formatSessionRange(item.start, item.end)).join('; ')}`
     : 'KI no clean window';
   const piText = piWindows.length
-    ? `PI ${piWindows.map((item) => formatSessionRange(item.start, item.end)).join(' · ')}`
+    ? `PI ${piWindows.map((item) => formatSessionRange(item.start, item.end)).join('; ')}`
     : 'PI no clean window';
   return `${kiText} | ${piText}`;
 }
