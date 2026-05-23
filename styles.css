@@ -1229,6 +1229,10 @@ h1::after {
   color: #47db73;
 }
 
+#summary-best-windows {
+  white-space: pre-line;
+}
+
 .summary-hidden-metrics {
   display: none;
 }

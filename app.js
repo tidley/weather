@@ -1,4 +1,4 @@
-console.log('APP.JS VERSION:', '2026-05-13-hayle-tide-mobile-1');
+console.log('APP.JS VERSION:', '2026-05-23-window-dates-lines-1');
 
 const DEFAULT_LOCATION_KEY = 'st-leonards';
 
@@ -1933,7 +1933,7 @@ function sameLocalDate(a, b) {
 }
 
 function formatSessionRange(start, end) {
-  const startText = `${formatSessionDate.format(start)} ${formatWindowTime.format(
+  const startText = `${formatSessionDate.format(start)}: ${formatWindowTime.format(
     start,
   )}`;
   const endText = sameLocalDate(start, end)
@@ -2010,7 +2010,7 @@ function summarizeSessionWindows(columns, kiteScores, paddleScores, windowSize) 
   const piText = piWindows.length
     ? `PI ${piWindows.map((item) => formatSessionRange(item.start, item.end)).join('; ')}`
     : 'PI no clean window';
-  return `${kiText} | ${piText}`;
+  return `${kiText}\n${piText}`;
 }
 
 function mainIssueForColumn({
