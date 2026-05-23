@@ -1,4 +1,4 @@
-console.log('APP.JS VERSION:', '2026-05-23-updated-dates-1');
+console.log('APP.JS VERSION:', '2026-05-23-mobile-windows-1');
 
 const DEFAULT_LOCATION_KEY = 'st-leonards';
 
@@ -82,6 +82,7 @@ const ui = {
   summaryTideUsability: document.getElementById('summary-tide-usability'),
   summaryRain: document.getElementById('summary-rain'),
   summaryBestWindows: document.getElementById('summary-best-windows'),
+  summaryBestWindowsRange: document.getElementById('summary-best-windows-range'),
   summaryMainIssue: document.getElementById('summary-main-issue'),
   summaryChips: document.getElementById('summary-chips'),
   forecastGrid: document.getElementById('forecast-grid'),
@@ -177,6 +178,7 @@ const formatTideTime = new Intl.DateTimeFormat('en-GB', {
 });
 
 const CACHE_STALE_MS = 24 * 60 * 60 * 1000;
+const BEST_WINDOW_DAYS = 7;
 const forecastScrollContainer = document.querySelector('.forecast-scroll');
 const meteoconsCache = new Map();
 let tapTooltip;
@@ -761,7 +763,7 @@ function renderSummary(
   score,
   tideRange,
   paddleScore,
-  sessionText,
+  sessionWindows,
 ) {
   if (!column || !data?.hourly) return;
   const idx = column.index;
@@ -902,7 +904,7 @@ function renderSummary(
     ui.summaryRain.classList.toggle('muted', Number(rainMm) === 0);
   }
   if (ui.summaryBestWindows) {
-    ui.summaryBestWindows.textContent = sessionText || 'No clean windows yet';
+    renderBestWindows(sessionWindows);
   }
   if (ui.summaryMainIssue) {
     ui.summaryMainIssue.textContent = mainIssue;
@@ -1935,23 +1937,64 @@ function sameLocalDate(a, b) {
 }
 
 function formatSessionRange(start, end) {
-  const startText = `${formatSessionDate.format(start)}: ${formatWindowTime.format(
+  const startText = `${formatBestWindowDate(start)}: ${formatWindowTime.format(
     start,
   )}`;
   const endText = sameLocalDate(start, end)
     ? formatWindowTime.format(end)
-    : `${formatSessionDate.format(end)} ${formatWindowTime.format(end)}`;
+    : `${formatBestWindowDate(end)} ${formatWindowTime.format(end)}`;
   return `${startText}-${endText}`;
 }
 
-function bestWindowsForScores(columns, scores, scoreKey, threshold, windowSize) {
+function formatBestWindowDate(date) {
+  return formatSessionDate.format(date).replace(',', '');
+}
+
+function formatBestWindowTimeRange(start, end) {
+  const endText = sameLocalDate(start, end)
+    ? formatWindowTime.format(end)
+    : `${formatBestWindowDate(end)} ${formatWindowTime.format(end)}`;
+  return `${formatWindowTime.format(start)} - ${endText}`;
+}
+
+function formatWindowWindRange(values) {
+  const windValues = values.filter((value) => Number.isFinite(value));
+  if (!windValues.length) return 'Wind n/a';
+  const min = Math.round(Math.min(...windValues));
+  const max = Math.round(Math.max(...windValues));
+  return min === max ? `${min} kt` : `${min}-${max} kt`;
+}
+
+function capitalise(text) {
+  return text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : '';
+}
+
+function bestWindowsForScores(
+  columns,
+  scores,
+  scoreKey,
+  threshold,
+  windowSize,
+  options = {},
+) {
   const groups = [];
   let current = null;
+  const horizonStart = columns[0]?.time || null;
+  const horizonEnd =
+    horizonStart && Number.isFinite(options.horizonDays)
+      ? new Date(
+          horizonStart.getTime() + options.horizonDays * 24 * 60 * 60 * 1000,
+        )
+      : null;
+  const limit = Math.max(1, options.limit || 2);
 
   columns.forEach((column, index) => {
     const value = scores[index]?.[scoreKey];
     const qualifies =
-      column.isDaylight && Number.isFinite(value) && value >= threshold;
+      column.isDaylight &&
+      Number.isFinite(value) &&
+      value >= threshold &&
+      (!horizonEnd || column.time < horizonEnd);
     if (!qualifies) {
       if (current) groups.push(current);
       current = null;
@@ -1969,11 +2012,13 @@ function bestWindowsForScores(columns, scores, scoreKey, threshold, windowSize) 
         end: column.time,
         lastIndex: column.index,
         values: [],
+        columns: [],
       };
     }
     current.end = column.time;
     current.lastIndex = column.index;
     current.values.push(value);
+    current.columns.push(column);
   });
   if (current) groups.push(current);
 
@@ -1986,17 +2031,83 @@ function bestWindowsForScores(columns, scores, scoreKey, threshold, windowSize) 
         Math.max(1, group.values.length),
     }))
     .sort((a, b) => b.avg - a.avg || a.start - b.start)
-    .slice(0, 2)
+    .slice(0, limit)
     .sort((a, b) => a.start - b.start);
 }
 
-function summarizeSessionWindows(columns, kiteScores, paddleScores, windowSize) {
+function buildSessionWindowSummary(
+  kind,
+  item,
+  data,
+  tideSeries,
+  tideRange,
+  windowSize,
+) {
+  const label = kind.toUpperCase();
+  if (!item) {
+    return {
+      kind,
+      label,
+      empty: true,
+      dateText: 'No clean window',
+      timeText: '',
+      scorePct: null,
+      windText: 'Below threshold',
+      directionText: '',
+      tideText: '',
+    };
+  }
+
+  const columns = item.columns || [];
+  const windValues = columns.map(
+    (column) => data.hourly.wind_speed_10m?.[column.index],
+  );
+  const middleColumn = columns[Math.floor(columns.length / 2)] || columns[0];
+  const direction = middleColumn
+    ? windCompass(data.hourly.wind_direction_10m?.[middleColumn.index])
+    : '—';
+  const tideTime = forecastWindowMidpoint(item.start, windowSize);
+  const tideLevel = tideLevelAt(tideSeries, tideTime);
+  const trend = tideTrendAt(tideSeries, tideTime);
+  const band = tideLabel(tideLevel, tideRange);
+  const tideText = trend
+    ? `${capitalise(trend)} tide`
+    : band
+      ? `${band} tide`
+      : 'Tide n/a';
+  const scorePct = Math.round(item.avg * 100);
+
+  return {
+    kind,
+    label,
+    empty: false,
+    dateText: formatBestWindowDate(item.start),
+    timeText: formatBestWindowTimeRange(item.start, item.end),
+    scorePct,
+    windText: formatWindowWindRange(windValues),
+    directionText: direction === '—' ? '' : direction,
+    tideText,
+    title: `${label} ${scorePct}% · ${formatSessionRange(item.start, item.end)}`,
+  };
+}
+
+function summarizeSessionWindows(
+  columns,
+  kiteScores,
+  paddleScores,
+  windowSize,
+  data,
+  tideSeries,
+  tideRange,
+) {
+  const windowOptions = { horizonDays: BEST_WINDOW_DAYS, limit: 1 };
   const kiWindows = bestWindowsForScores(
     columns,
     kiteScores,
     'ki',
     0.6,
     windowSize,
+    windowOptions,
   );
   const piWindows = bestWindowsForScores(
     columns,
@@ -2004,15 +2115,100 @@ function summarizeSessionWindows(columns, kiteScores, paddleScores, windowSize) 
     'pi',
     0.65,
     windowSize,
+    windowOptions,
   );
 
-  const kiText = kiWindows.length
-    ? `KI ${kiWindows.map((item) => formatSessionRange(item.start, item.end)).join('; ')}`
-    : 'KI no clean window';
-  const piText = piWindows.length
-    ? `PI ${piWindows.map((item) => formatSessionRange(item.start, item.end)).join('; ')}`
-    : 'PI no clean window';
-  return `${kiText}\n${piText}`;
+  return {
+    horizonDays: BEST_WINDOW_DAYS,
+    ki: buildSessionWindowSummary(
+      'ki',
+      kiWindows[0],
+      data,
+      tideSeries,
+      tideRange,
+      windowSize,
+    ),
+    pi: buildSessionWindowSummary(
+      'pi',
+      piWindows[0],
+      data,
+      tideSeries,
+      tideRange,
+      windowSize,
+    ),
+  };
+}
+
+function appendWindowLine(parent, text, className = '') {
+  const span = document.createElement('span');
+  span.className = className ? `window-line ${className}` : 'window-line';
+  span.textContent = text;
+  parent.appendChild(span);
+}
+
+function buildBestWindowRow(item) {
+  const row = document.createElement('article');
+  row.className = `window-row window-row-${item.kind}`;
+  row.dataset.kind = item.kind;
+  if (item.empty) row.classList.add('is-empty');
+  if (item.title) row.title = item.title;
+
+  const kind = document.createElement('div');
+  kind.className = 'window-kind';
+  kind.textContent = item.label;
+
+  const time = document.createElement('div');
+  time.className = 'window-time';
+  appendWindowLine(time, item.dateText, 'window-date');
+  if (item.timeText) appendWindowLine(time, item.timeText, 'window-hours');
+
+  const score = document.createElement('div');
+  score.className = 'window-score';
+  if (Number.isFinite(item.scorePct)) {
+    score.style.setProperty('--score-angle', `${item.scorePct * 3.6}deg`);
+  }
+  const scoreLabel = document.createElement('span');
+  scoreLabel.textContent = Number.isFinite(item.scorePct)
+    ? `${item.scorePct}%`
+    : '—';
+  score.appendChild(scoreLabel);
+
+  const detail = document.createElement('div');
+  detail.className = 'window-detail';
+  appendWindowLine(detail, item.windText, 'window-wind');
+  if (item.directionText) appendWindowLine(detail, item.directionText, 'window-dir');
+  if (item.tideText) appendWindowLine(detail, item.tideText, 'window-tide');
+
+  const chevron = document.createElement('span');
+  chevron.className = 'window-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = '›';
+
+  row.append(kind, time, score, detail, chevron);
+  return row;
+}
+
+function renderBestWindows(summary) {
+  if (!ui.summaryBestWindows) return;
+  ui.summaryBestWindows.innerHTML = '';
+  const horizonDays = summary?.horizonDays || BEST_WINDOW_DAYS;
+  if (ui.summaryBestWindowsRange) {
+    ui.summaryBestWindowsRange.textContent = `(next ${horizonDays} days)`;
+  }
+
+  if (!summary) {
+    ui.summaryBestWindows.textContent = '—';
+    return;
+  }
+
+  const rows = [summary?.pi, summary?.ki].filter(Boolean);
+  if (!rows.length) {
+    ui.summaryBestWindows.textContent = 'No clean windows yet';
+    return;
+  }
+  rows.forEach((item) => {
+    ui.summaryBestWindows.appendChild(buildBestWindowRow(item));
+  });
 }
 
 function mainIssueForColumn({
@@ -2588,6 +2784,9 @@ function renderForecast(data, tideEvents) {
     columnScores,
     paddleScores,
     windowSize,
+    data,
+    tideSeries,
+    tideRange,
   );
 
   // No demo data; show real scores only.
@@ -3064,9 +3263,13 @@ function renderForecast(data, tideEvents) {
 
   if (columns.length) {
     if (ui.forecastRange) {
+      const overviewEndIndex = Math.min(
+        columns.length - 1,
+        Math.ceil(48 / windowSize),
+      );
       ui.forecastRange.textContent = `${formatWindow.format(
         columns[0].time,
-      )} → ${formatWindow.format(columns[columns.length - 1].time)}`;
+      )} → ${formatWindow.format(columns[overviewEndIndex].time)}`;
     }
   } else if (ui.forecastRange) {
     ui.forecastRange.textContent = 'No forecast windows';
@@ -3205,8 +3408,9 @@ function resetForecastView() {
   if (ui.summaryDirectionSafety) ui.summaryDirectionSafety.textContent = '—';
   if (ui.summaryDirectionDetail) ui.summaryDirectionDetail.textContent = '—';
   if (ui.summaryTideUsability) ui.summaryTideUsability.textContent = '—';
-  if (ui.summaryBestWindows) ui.summaryBestWindows.textContent = '—';
+  renderBestWindows(null);
   if (ui.summaryMainIssue) ui.summaryMainIssue.textContent = '—';
+  if (ui.forecastRange) ui.forecastRange.textContent = '—';
 
   if (ui.summaryChips) {
     ui.summaryChips.innerHTML = '';

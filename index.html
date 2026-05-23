@@ -17,11 +17,33 @@
 <body>
   <main class="app">
     <header class="topbar">
-      <div>
+      <div class="topbar-title">
         <p class="eyebrow">Kitesurfing Forecast</p>
         <h1 id="location-name">Loading…</h1>
+        <p class="summary-updated topbar-updated" id="summary-updated">Weather — · Tides —</p>
       </div>
-      <p class="summary-updated topbar-updated" id="summary-updated">Weather — · Tides —</p>
+      <div class="topbar-actions">
+        <div
+          class="location-toggle"
+          role="radiogroup"
+          aria-label="Forecast location"
+        >
+          <label>
+            <input
+              type="radio"
+              name="forecast-location"
+              value="st-leonards"
+              checked
+            />
+            <span>St Leonards</span>
+          </label>
+          <label>
+            <input type="radio" name="forecast-location" value="hayle" />
+            <span>Hayle</span>
+          </label>
+        </div>
+        <button class="icon-button" id="refresh" type="button" aria-label="Refresh forecast" title="Refresh forecast">⚙</button>
+      </div>
     </header>
 
     <section class="summary-bar decision-panel" aria-live="polite">
@@ -71,16 +93,6 @@
           <span class="condition-sub" id="summary-tide"><span>—</span></span>
         </article>
 
-        <article class="condition-card condition-card-wide">
-          <div class="session-row">
-            <span class="summary-title">Best windows</span>
-            <strong id="summary-best-windows">—</strong>
-          </div>
-          <div class="session-row">
-            <span class="summary-title">Main issue</span>
-            <span id="summary-main-issue">—</span>
-          </div>
-        </article>
       </div>
 
       <div class="summary-hidden-metrics" aria-hidden="true">
@@ -90,26 +102,20 @@
       </div>
     </section>
 
+    <section class="windows-card" aria-label="Best session windows">
+      <div class="windows-card-header">
+        <span class="windows-card-icon" aria-hidden="true"></span>
+        <span class="summary-title">Best windows</span>
+        <span class="windows-range" id="summary-best-windows-range">(next 7 days)</span>
+      </div>
+      <div class="windows-list" id="summary-best-windows">—</div>
+    </section>
+
     <section class="card forecast" id="forecast-card">
       <div class="forecast-controls">
-        <div
-          class="location-toggle"
-          role="radiogroup"
-          aria-label="Forecast location"
-        >
-          <label>
-            <input
-              type="radio"
-              name="forecast-location"
-              value="st-leonards"
-              checked
-            />
-            <span>St Leonards</span>
-          </label>
-          <label>
-            <input type="radio" name="forecast-location" value="hayle" />
-            <span>Hayle</span>
-          </label>
+        <div>
+          <span class="summary-title">Next 48 hours overview</span>
+          <span class="forecast-range" id="forecast-range">—</span>
         </div>
         <label class="toggle">
           <input type="checkbox" id="toggle-night" checked />
@@ -135,6 +141,19 @@
         <span class="legend-item"><span class="legend-dot very-poor"></span>Very poor (0–19%)</span>
         <span class="legend-note">KI prioritises kite safety; PI prioritises calm paddle conditions.</span>
       </div>
+    </section>
+
+    <section class="insight-grid" aria-live="polite">
+      <article class="insight-card">
+        <span class="summary-title">Main issue</span>
+        <strong id="summary-main-issue">—</strong>
+        <p>Check the forecast table for the limiting factors.</p>
+      </article>
+      <article class="insight-card">
+        <span class="summary-title">Tip</span>
+        <strong>Watch shifts</strong>
+        <p>Review the next good window before committing to a session.</p>
+      </article>
     </section>
 
     <footer class="page-footer">
