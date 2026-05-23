@@ -1,4 +1,4 @@
-console.log('APP.JS VERSION:', '2026-05-23-mobile-windows-1');
+console.log('APP.JS VERSION:', '2026-05-23-window-horizon-4w-1');
 
 const DEFAULT_LOCATION_KEY = 'st-leonards';
 
@@ -178,7 +178,9 @@ const formatTideTime = new Intl.DateTimeFormat('en-GB', {
 });
 
 const CACHE_STALE_MS = 24 * 60 * 60 * 1000;
-const BEST_WINDOW_DAYS = 7;
+const BEST_WINDOW_WEEKS = 4;
+const BEST_WINDOW_DAYS = BEST_WINDOW_WEEKS * 7;
+const BEST_WINDOW_LABEL = `${BEST_WINDOW_WEEKS} weeks`;
 const forecastScrollContainer = document.querySelector('.forecast-scroll');
 const meteoconsCache = new Map();
 let tapTooltip;
@@ -2193,7 +2195,10 @@ function renderBestWindows(summary) {
   ui.summaryBestWindows.innerHTML = '';
   const horizonDays = summary?.horizonDays || BEST_WINDOW_DAYS;
   if (ui.summaryBestWindowsRange) {
-    ui.summaryBestWindowsRange.textContent = `(next ${horizonDays} days)`;
+    ui.summaryBestWindowsRange.textContent =
+      horizonDays === BEST_WINDOW_DAYS
+        ? `(next ${BEST_WINDOW_LABEL})`
+        : `(next ${horizonDays} days)`;
   }
 
   if (!summary) {
