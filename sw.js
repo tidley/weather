@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v7";
+const CACHE_VERSION = "v9";
 const STATIC_CACHE = `forecast-static-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [

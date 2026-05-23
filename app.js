@@ -1,4 +1,4 @@
-console.log('APP.JS VERSION:', '2026-05-23-window-dates-lines-1');
+console.log('APP.JS VERSION:', '2026-05-23-updated-dates-1');
 
 const DEFAULT_LOCATION_KEY = 'st-leonards';
 
@@ -142,6 +142,8 @@ const formatWindow = new Intl.DateTimeFormat('en-GB', {
 });
 
 const formatUpdatedTime = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: 'short',
   hour: '2-digit',
   minute: '2-digit',
 });
@@ -1904,7 +1906,7 @@ function tideUsability(score, tideLevel, tideRange, tideEvents, time) {
   const trend = tideTrendAt(tideEvents, time);
   const band = tideLabel(tideLevel, tideRange) || 'Tide n/a';
   const highTiming = score?.tideTiming;
-  let label = 'Constrained';
+  let label = 'Tight';
   let kind = 'poor';
   if (Number.isFinite(value)) {
     if (value >= 0.72) {
