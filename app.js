@@ -1,4 +1,4 @@
-console.log('APP.JS VERSION:', '2026-05-23-window-horizon-4w-1');
+console.log('APP.JS VERSION:', '2026-05-24-ota-update-1');
 
 const DEFAULT_LOCATION_KEY = 'st-leonards';
 
@@ -93,6 +93,8 @@ const ui = {
   tideSource: document.getElementById('tide-source'),
   tideSvg: document.getElementById('tide-svg'),
   refresh: document.getElementById('refresh'),
+  appUpdateButton: document.getElementById('app-update-button'),
+  appUpdateStatus: document.getElementById('app-update-status'),
   toggleNight: document.getElementById('toggle-night'),
   locationOptions: Array.from(
     document.querySelectorAll('input[name="forecast-location"]'),
@@ -181,12 +183,21 @@ const CACHE_STALE_MS = 24 * 60 * 60 * 1000;
 const BEST_WINDOW_WEEKS = 4;
 const BEST_WINDOW_DAYS = BEST_WINDOW_WEEKS * 7;
 const BEST_WINDOW_LABEL = `${BEST_WINDOW_WEEKS} weeks`;
+const OTA_CHECK_INTERVAL_MS = 15 * 60 * 1000;
+const RELEASE_UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+const releaseUpdateUrl = 'updater.php';
 const forecastScrollContainer = document.querySelector('.forecast-scroll');
 const meteoconsCache = new Map();
 let tapTooltip;
 let tapTooltipTarget;
 let tapTooltipVisible = false;
 let moonIconId = 0;
+let serviceWorkerRegistration = null;
+let waitingServiceWorker = null;
+let reloadForServiceWorkerUpdate = false;
+let appUpdateMode = null;
+let latestReleaseUpdateInfo = null;
+let releaseUpdateCheckInFlight = false;
 
 function shouldEnableTapTooltips() {
   return window.matchMedia && window.matchMedia('(hover: none)').matches;
@@ -3562,10 +3573,276 @@ async function loadWaves(options = {}) {
   }
 }
 
+function setAppUpdateStatus(message = '', isError = false) {
+  if (!ui.appUpdateStatus) return;
+  ui.appUpdateStatus.textContent = message;
+  ui.appUpdateStatus.classList.toggle('hidden', !message);
+  ui.appUpdateStatus.classList.toggle('error', isError);
+}
+
+function showAppUpdateButton(mode, statusText) {
+  appUpdateMode = mode;
+  if (ui.appUpdateButton) {
+    ui.appUpdateButton.classList.remove('hidden');
+    ui.appUpdateButton.disabled = false;
+    ui.appUpdateButton.textContent = 'Update';
+  }
+  setAppUpdateStatus(statusText || 'Update ready');
+}
+
+function hideAppUpdateButton() {
+  appUpdateMode = null;
+  if (ui.appUpdateButton) {
+    ui.appUpdateButton.classList.add('hidden');
+    ui.appUpdateButton.disabled = true;
+    ui.appUpdateButton.textContent = 'Update';
+  }
+}
+
+function showServiceWorkerUpdateButton(worker) {
+  waitingServiceWorker = worker;
+  showAppUpdateButton('service-worker', 'Update ready');
+}
+
+function showReleaseUpdateButton(result) {
+  latestReleaseUpdateInfo = result;
+  showAppUpdateButton('release', `${result.latestTag || 'Update'} available`);
+}
+
+function watchInstallingServiceWorker(worker) {
+  if (!worker) return;
+  worker.addEventListener('statechange', () => {
+    if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+      showServiceWorkerUpdateButton(worker);
+    }
+  });
+}
+
+async function checkForAppUpdate(options = {}) {
+  if (!serviceWorkerRegistration) return null;
+  const manual = Boolean(options.manual);
+  if (manual) setAppUpdateStatus('Checking for app update...');
+
+  try {
+    const registration = await serviceWorkerRegistration.update();
+    serviceWorkerRegistration = registration;
+    if (registration.waiting && navigator.serviceWorker.controller) {
+      showServiceWorkerUpdateButton(registration.waiting);
+    } else if (manual) {
+      hideAppUpdateButton();
+      setAppUpdateStatus('App is up to date');
+      window.setTimeout(() => setAppUpdateStatus(''), 3000);
+    }
+    return registration;
+  } catch (error) {
+    console.warn('App update check failed', error);
+    if (manual) setAppUpdateStatus('Update check failed', true);
+    return null;
+  }
+}
+
+async function checkForReleaseUpdate(options = {}) {
+  const silent = options.silent !== false;
+  if (releaseUpdateCheckInFlight) return latestReleaseUpdateInfo;
+  releaseUpdateCheckInFlight = true;
+  if (!silent) setAppUpdateStatus('Checking GitHub release...');
+
+  try {
+    const url = new URL(releaseUpdateUrl, window.location.href);
+    url.searchParams.set('action', 'status');
+    url.searchParams.set('_', String(Date.now()));
+    const response = await fetch(url, { cache: 'no-store' });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.success) {
+      throw new Error(result?.error || 'Release update check failed');
+    }
+
+    latestReleaseUpdateInfo = result;
+    if (result.updateAvailable && result.zipAvailable && result.installEnabled) {
+      showReleaseUpdateButton(result);
+    } else if (!silent) {
+      hideAppUpdateButton();
+      const message = result.updateAvailable
+        ? 'Update is available, but server install is not configured'
+        : 'App is up to date';
+      setAppUpdateStatus(message, Boolean(result.updateAvailable));
+      window.setTimeout(() => setAppUpdateStatus(''), 4000);
+    }
+    return result;
+  } catch (error) {
+    console.warn('Release update check failed', error);
+    latestReleaseUpdateInfo = null;
+    if (!silent) setAppUpdateStatus(error.message || 'Release update check failed', true);
+    return null;
+  } finally {
+    releaseUpdateCheckInFlight = false;
+  }
+}
+
+async function clearServiceWorkerStaticCaches() {
+  if (!('caches' in window)) return;
+  const keys = await caches.keys();
+  await Promise.all(
+    keys
+      .filter((key) => key.startsWith('forecast-static-'))
+      .map((key) => caches.delete(key)),
+  );
+}
+
+async function reloadAfterReleaseInstall() {
+  try {
+    await clearServiceWorkerStaticCaches();
+  } catch (error) {
+    console.warn('Could not clear app caches after update', error);
+  }
+
+  if (serviceWorkerRegistration) {
+    try {
+      await serviceWorkerRegistration.update();
+    } catch (error) {
+      console.warn('Could not refresh service worker after update', error);
+    }
+  }
+
+  window.location.reload();
+}
+
+async function installReleaseUpdate() {
+  let updateInfo = latestReleaseUpdateInfo;
+  if (!updateInfo?.updateAvailable) {
+    updateInfo = await checkForReleaseUpdate({ silent: false });
+  }
+  if (!updateInfo?.updateAvailable) return;
+
+  const label = updateInfo.latestTag || `v${updateInfo.latestVersion}`;
+  const token = window.prompt(`Install ${label}? Enter the update token.`);
+  if (!token) {
+    setAppUpdateStatus('Update token is required', true);
+    return;
+  }
+
+  if (ui.appUpdateButton) {
+    ui.appUpdateButton.disabled = true;
+    ui.appUpdateButton.textContent = 'Updating...';
+  }
+  setAppUpdateStatus('Downloading and installing update...');
+
+  try {
+    const response = await fetch(releaseUpdateUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Weather-Update-Token': token,
+      },
+      body: JSON.stringify({ action: 'install' }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.success) {
+      throw new Error(result?.error || 'Update failed');
+    }
+
+    if (result.updated) {
+      setAppUpdateStatus(`Updated to ${result.tag || label}. Reloading...`);
+      window.setTimeout(reloadAfterReleaseInstall, 1200);
+    } else {
+      setAppUpdateStatus(result.message || 'Already up to date.');
+      hideAppUpdateButton();
+    }
+  } catch (error) {
+    console.warn('Release update failed', error);
+    setAppUpdateStatus(error.message || 'Update failed', true);
+    if (ui.appUpdateButton) {
+      ui.appUpdateButton.disabled = false;
+      ui.appUpdateButton.textContent = 'Update';
+    }
+  }
+}
+
+function installServiceWorkerUpdate() {
+  const worker = waitingServiceWorker || serviceWorkerRegistration?.waiting;
+  if (!worker) {
+    checkForAppUpdate({ manual: true });
+    return;
+  }
+
+  reloadForServiceWorkerUpdate = true;
+  if (ui.appUpdateButton) {
+    ui.appUpdateButton.disabled = true;
+    ui.appUpdateButton.textContent = 'Updating...';
+  }
+  setAppUpdateStatus('Updating app...');
+  worker.postMessage({ type: 'SKIP_WAITING' });
+}
+
+function installAppUpdate() {
+  if (appUpdateMode === 'release') {
+    installReleaseUpdate();
+    return;
+  }
+  installServiceWorkerUpdate();
+}
+
+function scheduleAppUpdateChecks() {
+  window.setInterval(() => {
+    checkForAppUpdate();
+  }, OTA_CHECK_INTERVAL_MS);
+  window.setInterval(() => {
+    checkForReleaseUpdate();
+  }, RELEASE_UPDATE_CHECK_INTERVAL_MS);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkForAppUpdate();
+      checkForReleaseUpdate();
+    }
+  });
+}
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    window.addEventListener('load', () => {
+      scheduleAppUpdateChecks();
+      window.setTimeout(() => checkForReleaseUpdate(), 4000);
+    });
+    return;
+  }
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!reloadForServiceWorkerUpdate) return;
+    reloadForServiceWorkerUpdate = false;
+    window.location.reload();
+  });
+
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('sw.js');
+      serviceWorkerRegistration = registration;
+
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        showAppUpdateButton(registration.waiting);
+      }
+      watchInstallingServiceWorker(registration.installing);
+      registration.addEventListener('updatefound', () => {
+        watchInstallingServiceWorker(registration.installing);
+      });
+
+      scheduleAppUpdateChecks();
+      window.setTimeout(() => checkForAppUpdate(), 2000);
+      window.setTimeout(() => checkForReleaseUpdate(), 4000);
+    } catch (error) {
+      console.warn('Service worker registration failed', error);
+    }
+  });
+}
+
 if (ui.refresh) {
   ui.refresh.addEventListener('click', () => {
     loadForecast({ force: true });
   });
+}
+
+if (ui.appUpdateButton) {
+  ui.appUpdateButton.addEventListener('click', installAppUpdate);
 }
 
 if (ui.toggleNight) {
@@ -3590,11 +3867,4 @@ if (ui.toggleNight) {
 }
 syncNightVisibility();
 hydrateForecast({ reset: true });
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch((error) => {
-      console.warn('Service worker registration failed', error);
-    });
-  });
-}
+registerServiceWorker();

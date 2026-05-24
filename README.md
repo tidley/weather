@@ -28,6 +28,7 @@ The PHP endpoints are:
 - `weather.php` → Open-Meteo Forecast (cached in `weather-cache.json`)
 - `waves.php` → Open-Meteo Marine (cached in `waves-cache.json`)
 - `tides.php` → UKHO tidal events (cached in `tides-cache.json`)
+- `updater.php` → GitHub release update status/install endpoint
 
 LocalStorage is also used for front-end caching.
 
@@ -45,6 +46,24 @@ Android (Chrome):
 1. Open the site.
 2. Tap the menu.
 3. Choose **Install app** / **Add to Home screen**.
+
+The page checks for updates through two paths:
+
+- GitHub release OTA updates: when a newer `weather.zip` release is available,
+  an **Update** button appears in the header. Installing requires
+  `WEATHER_UPDATE_TOKEN`.
+- PWA cache updates: when a new service worker has cached newer app assets, the
+  same **Update** button activates it and reloads into the new version.
+
+## Release package
+
+GitHub Actions builds `build/weather.zip` for tags matching `v*` and attaches it
+to the GitHub release. Update `WEATHER_VERSION` in `version.php` before tagging.
+You can also run the same package build locally:
+
+```bash
+./scripts/build-release.sh
+```
 
 ## Configure locations
 
@@ -77,6 +96,25 @@ Create a `.env` file (see `.env.example`) with:
 ```bash
 UKHO_KEY=your-key-here
 ```
+
+Optional OTA update settings:
+
+```bash
+WEATHER_UPDATE_TOKEN=long-random-token-for-ota-installs
+WEATHER_UPDATE_REPO=tidley/weather
+WEATHER_GITHUB_TOKEN=optional-token-for-private-repo-release-downloads
+```
+
+Generate and set a real update token on the deployed server:
+
+```bash
+openssl rand -hex 32
+```
+
+Put the generated value in the deployed `.env` as `WEATHER_UPDATE_TOKEN`.
+Keep it secret; the app asks for this token before installing a GitHub release
+ZIP. If the GitHub release repo is private, also set `WEATHER_GITHUB_TOKEN` to a
+GitHub token that can read releases.
 
 ## Live site
 

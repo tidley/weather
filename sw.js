@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v11";
+const CACHE_VERSION = "v12";
 const STATIC_CACHE = `forecast-static-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
@@ -16,7 +16,6 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -51,6 +50,12 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(cacheFirst(request));
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 async function cacheFirst(request) {

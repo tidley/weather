@@ -75,6 +75,43 @@ body {
   text-align: left;
 }
 
+.hidden {
+  display: none !important;
+}
+
+.ota-status {
+  align-self: center;
+  color: #9db2c9;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.ota-status.error {
+  color: #ffb199;
+}
+
+.update-button {
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid rgba(56, 212, 111, 0.46);
+  border-radius: 8px;
+  background: rgba(23, 122, 61, 0.24);
+  color: #c9f9d7;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.update-button:hover {
+  border-color: rgba(87, 235, 128, 0.72);
+  background: rgba(28, 145, 70, 0.34);
+}
+
+.update-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .icon-button {
   display: inline-grid;
   place-items: center;
@@ -1994,6 +2031,7 @@ h1::after {
   .topbar-actions {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
   }
 
   .location-toggle {

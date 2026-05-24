@@ -1,0 +1,58 @@
+name: Release Package
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build and attach release zip
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Prepare build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y php-cli zip unzip
+
+      - name: Verify source syntax
+        run: |
+          node --check app.js
+          node --check sw.js
+          php -l weather.php
+          php -l waves.php
+          php -l tides.php
+          php -l updater.php
+          php -l version.php
+
+      - name: Build distribution package
+        run: |
+          chmod +x scripts/build-release.sh
+          ./scripts/build-release.sh
+
+      - name: Verify package
+        run: |
+          test -f build/weather.zip
+          unzip -t build/weather.zip
+
+      - name: Attach package to GitHub Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/weather.zip
+          generate_release_notes: true
+
+      - name: Upload workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: weather
+          path: build/weather.zip
