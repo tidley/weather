@@ -210,6 +210,9 @@ function hideTapTooltip() {
   tapTooltip.setAttribute('aria-hidden', 'true');
   if (tapTooltipTarget) {
     tapTooltipTarget.removeAttribute('aria-describedby');
+    if (tapTooltipTarget === ui.summaryBand) {
+      tapTooltipTarget.setAttribute('aria-expanded', 'false');
+    }
   }
   tapTooltipVisible = false;
   tapTooltipTarget = null;
@@ -226,6 +229,9 @@ function showTapTooltip(target, text) {
   tapTooltipVisible = true;
   tapTooltipTarget = target;
   target.setAttribute('aria-describedby', tapTooltip.id);
+  if (target === ui.summaryBand) {
+    target.setAttribute('aria-expanded', 'true');
+  }
 
   const rect = target.getBoundingClientRect();
   const scrollX = window.scrollX || window.pageXOffset || 0;
@@ -2124,6 +2130,7 @@ function buildSessionWindowSummary(
     kind,
     label,
     empty: false,
+    start: item.start,
     dateText: formatBestWindowDate(item.start),
     timeText: formatBestWindowTimeRange(item.start, item.end),
     scorePct,
@@ -2263,9 +2270,9 @@ function renderNextWindow(summary) {
     ui.summaryNextWindow.textContent = '—';
     return;
   }
-  const item = [summary?.pi, summary?.ki].find(
-    (window) => window && !window.empty,
-  );
+  const item = [summary?.pi, summary?.ki]
+    .filter((window) => window && !window.empty)
+    .sort((a, b) => a.start - b.start)[0];
   ui.summaryNextWindow.textContent = item
     ? [item.label, item.dateText, item.timeText].filter(Boolean).join(' ')
     : 'No clean window';
