@@ -1875,7 +1875,9 @@ h1::after {
   }
 
   .status-rail {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(112px, 1fr));
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .status-segment:first-child {
@@ -1980,6 +1982,7 @@ h1::after {
   .status-segment {
     align-items: center;
     flex-wrap: nowrap;
+    min-width: 112px;
     min-height: 44px;
     gap: 2px 4px;
     padding: 4px 8px;
