@@ -48,69 +48,47 @@
       </div>
     </header>
 
-    <section class="summary-bar decision-panel" aria-live="polite">
-      <article class="summary-tile score-hero" id="decision-band">
-        <div>
-          <span class="summary-title">Overall</span>
-          <div class="score-line">
-            <span id="summary-overall">—</span>
-            <span class="score-percent" id="summary-ki-score">—</span>
-          </div>
-        </div>
-        <div class="score-secondary">
-          <span id="summary-pi-score">PI —</span>
-          <span id="summary-daylight">—</span>
-        </div>
-        <div class="chips-row" id="summary-chips"></div>
+    <section class="summary-bar status-rail" aria-live="polite">
+      <article class="status-segment" id="decision-band">
+        <span class="summary-title">Overall</span>
+        <strong id="summary-overall">—</strong>
+        <span id="summary-ki-score">—</span>
+        <span id="summary-pi-score">PI —</span>
+        <span id="summary-daylight">—</span>
+        <span class="chips-row" id="summary-chips"></span>
       </article>
 
-      <div class="condition-strip">
-        <article class="condition-card">
-          <span class="summary-title">Wind avg</span>
-          <strong id="summary-wind">—</strong>
-          <span class="condition-sub">
-            <span id="summary-direction">—</span>
-            <span id="summary-direction-icon" aria-hidden="true"></span>
-          </span>
-        </article>
+      <article class="status-segment">
+        <span class="summary-title">Wind</span>
+        <strong id="summary-wind">—</strong>
+        <span id="summary-direction">—</span>
+        <span id="summary-direction-icon" aria-hidden="true"></span>
+      </article>
 
-        <article class="condition-card">
-          <span class="summary-title">Gusts max</span>
-          <strong><span id="summary-gusts">—</span> kt</strong>
-          <span class="condition-sub">
-            <span id="summary-gust-quality">—</span>
-            <span id="summary-gust-factor">—</span>
-          </span>
-        </article>
+      <article class="status-segment">
+        <span class="summary-title">Gusts</span>
+        <strong><span id="summary-gusts">—</span> kt</strong>
+        <span id="summary-gust-quality">—</span>
+        <span id="summary-gust-factor">—</span>
+      </article>
 
-        <article class="condition-card">
-          <span class="summary-title">Direction safety</span>
-          <strong id="summary-direction-safety">—</strong>
-          <span class="condition-sub" id="summary-direction-detail">—</span>
-        </article>
+      <article class="status-segment">
+        <span class="summary-title">Direction</span>
+        <strong id="summary-direction-safety">—</strong>
+        <span id="summary-direction-detail">—</span>
+      </article>
 
-        <article class="condition-card">
-          <span class="summary-title">Tide usability</span>
-          <strong id="summary-tide-usability">—</strong>
-          <span class="condition-sub" id="summary-tide"><span>—</span></span>
-        </article>
-
-      </div>
+      <article class="status-segment">
+        <span class="summary-title">Tide</span>
+        <strong id="summary-tide-usability">—</strong>
+        <span id="summary-tide"><span>—</span></span>
+      </article>
 
       <div class="summary-hidden-metrics" aria-hidden="true">
         <span id="summary-temp">—</span>
         <span id="summary-waves"><span>—</span></span>
         <span id="summary-rain"><span>—</span></span>
       </div>
-    </section>
-
-    <section class="windows-card" aria-label="Best session windows">
-      <div class="windows-card-header">
-        <span class="windows-card-icon" aria-hidden="true"></span>
-        <span class="summary-title">Best windows</span>
-        <span class="windows-range" id="summary-best-windows-range">(next 4 weeks)</span>
-      </div>
-      <div class="windows-list" id="summary-best-windows">—</div>
     </section>
 
     <section class="card forecast" id="forecast-card">
@@ -143,6 +121,15 @@
         <span class="legend-item"><span class="legend-dot very-poor"></span>Very poor (0–19%)</span>
         <span class="legend-note">KI prioritises kite safety; PI prioritises calm paddle conditions.</span>
       </div>
+    </section>
+
+    <section class="windows-card" aria-label="Best session windows">
+      <div class="windows-card-header">
+        <span class="windows-card-icon" aria-hidden="true"></span>
+        <span class="summary-title">Best windows</span>
+        <span class="windows-range" id="summary-best-windows-range">(next 4 weeks)</span>
+      </div>
+      <div class="windows-list" id="summary-best-windows">—</div>
     </section>
 
     <section class="insight-grid" aria-live="polite">
