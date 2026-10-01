@@ -1978,8 +1978,9 @@ h1::after {
   }
 
   .status-segment {
-    min-height: 56px;
-    padding: 8px 10px;
+    min-height: 44px;
+    gap: 2px 4px;
+    padding: 4px 8px;
   }
 
   .status-segment:first-child {
@@ -1995,15 +1996,16 @@ h1::after {
   }
 
   .status-segment #summary-overall {
-    font-size: 1.15rem;
-  }
-
-  .status-segment strong {
     font-size: 1rem;
   }
 
+  .status-segment strong {
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
   .status-segment-next-window strong {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
   }
 
   .status-segment .summary-title,
@@ -2014,7 +2016,8 @@ h1::after {
   .status-segment #summary-gust-factor,
   .status-segment #summary-direction-detail,
   .status-segment #summary-tide {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
+    line-height: 1;
   }
 
   .condition-sub {
