@@ -3448,6 +3448,7 @@ function loadCache() {
 }
 
 function resetForecastView() {
+  hideTapTooltip();
   if (ui.forecastHeadRow) {
     ui.forecastHeadRow.innerHTML = '';
     const dateLabel = document.createElement('th');
