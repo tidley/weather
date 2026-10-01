@@ -1978,9 +1978,39 @@ h1::after {
   }
 
   .status-segment {
+    align-items: center;
+    flex-wrap: nowrap;
     min-height: 44px;
     gap: 2px 4px;
     padding: 4px 8px;
+    overflow: hidden;
+  }
+
+  .status-segment .summary-title {
+    flex: 0 0 auto;
+    font-size: 0.6rem;
+    line-height: 1;
+  }
+
+  .status-segment strong,
+  .status-segment span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #summary-pi-score,
+  #summary-daylight,
+  #summary-gust-quality,
+  #summary-gust-factor,
+  #summary-direction-detail,
+  #summary-tide {
+    display: none;
+  }
+
+  .status-segment-next-window strong {
+    flex: 1 1 auto;
   }
 
   .status-segment:first-child {
