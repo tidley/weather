@@ -293,15 +293,18 @@ h2 {
   cursor: help;
 }
 
-.summary-tile[data-verdict="GOOD"] {
+.summary-tile[data-verdict="GOOD"],
+#decision-band[data-verdict="GOOD"] {
   background: rgba(26, 122, 99, 0.28);
 }
 
-.summary-tile[data-verdict="MARGINAL"] {
+.summary-tile[data-verdict="MARGINAL"],
+#decision-band[data-verdict="MARGINAL"] {
   background: rgba(46, 79, 118, 0.3);
 }
 
-.summary-tile[data-verdict="POOR"] {
+.summary-tile[data-verdict="POOR"],
+#decision-band[data-verdict="POOR"] {
   background: rgba(120, 60, 60, 0.3);
 }
 
@@ -1288,8 +1291,12 @@ h1::after {
   background: rgba(8, 24, 40, 0.66);
 }
 
-#decision-band {
+#decision-band[title]:not([title=""]) {
   cursor: help;
+}
+
+.status-rail #summary-chips {
+  display: none !important;
 }
 
 .status-segment:first-child {
