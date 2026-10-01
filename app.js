@@ -81,6 +81,7 @@ const ui = {
   summaryTide: document.getElementById('summary-tide'),
   summaryTideUsability: document.getElementById('summary-tide-usability'),
   summaryRain: document.getElementById('summary-rain'),
+  summaryNextWindow: document.getElementById('summary-next-window'),
   summaryBestWindows: document.getElementById('summary-best-windows'),
   summaryBestWindowsRange: document.getElementById('summary-best-windows-range'),
   summaryMainIssue: document.getElementById('summary-main-issue'),
@@ -206,16 +207,25 @@ function shouldEnableTapTooltips() {
 function hideTapTooltip() {
   if (!tapTooltip || !tapTooltipVisible) return;
   tapTooltip.classList.remove('visible');
+  tapTooltip.setAttribute('aria-hidden', 'true');
+  if (tapTooltipTarget) {
+    tapTooltipTarget.removeAttribute('aria-describedby');
+  }
   tapTooltipVisible = false;
   tapTooltipTarget = null;
 }
 
 function showTapTooltip(target, text) {
   if (!tapTooltip) return;
+  if (tapTooltipTarget && tapTooltipTarget !== target) {
+    tapTooltipTarget.removeAttribute('aria-describedby');
+  }
   tapTooltip.textContent = text;
   tapTooltip.classList.add('visible');
+  tapTooltip.setAttribute('aria-hidden', 'false');
   tapTooltipVisible = true;
   tapTooltipTarget = target;
+  target.setAttribute('aria-describedby', tapTooltip.id);
 
   const rect = target.getBoundingClientRect();
   const scrollX = window.scrollX || window.pageXOffset || 0;
@@ -265,13 +275,14 @@ document.querySelectorAll('.meteocons-icon[data-meteocons]').forEach((icon) => {
   renderMeteoconsIcon(icon, icon.dataset.meteocons);
 });
 
-if (shouldEnableTapTooltips()) {
-  tapTooltip = document.createElement('div');
-  tapTooltip.className = 'tap-tooltip';
-  tapTooltip.setAttribute('role', 'tooltip');
-  tapTooltip.setAttribute('aria-hidden', 'true');
-  document.body.appendChild(tapTooltip);
+tapTooltip = document.createElement('div');
+tapTooltip.id = 'tap-tooltip';
+tapTooltip.className = 'tap-tooltip';
+tapTooltip.setAttribute('role', 'tooltip');
+tapTooltip.setAttribute('aria-hidden', 'true');
+document.body.appendChild(tapTooltip);
 
+if (shouldEnableTapTooltips()) {
   document.addEventListener('click', (event) => {
     const target = event.target.closest(
       '.forecast-grid .label-cell, .forecast-grid .data-cell, .summary-tile, #decision-band',
@@ -292,6 +303,24 @@ if (shouldEnableTapTooltips()) {
   window.addEventListener('scroll', hideTapTooltip, true);
   window.addEventListener('resize', hideTapTooltip);
 }
+
+if (ui.summaryBand) {
+  ui.summaryBand.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const text = tooltipTextForCell(ui.summaryBand);
+    if (!text) return;
+    event.preventDefault();
+    if (tapTooltipTarget === ui.summaryBand && tapTooltipVisible) {
+      hideTapTooltip();
+      return;
+    }
+    showTapTooltip(ui.summaryBand, text);
+  });
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') hideTapTooltip();
+});
 
 function formatUpdatedValue(isoTime) {
   if (!isoTime) return '—';
@@ -919,6 +948,7 @@ function renderSummary(
   if (ui.summaryBestWindows) {
     renderBestWindows(sessionWindows);
   }
+  renderNextWindow(sessionWindows);
   if (ui.summaryMainIssue) {
     ui.summaryMainIssue.textContent = mainIssue;
   }
@@ -2227,6 +2257,20 @@ function renderBestWindows(summary) {
   });
 }
 
+function renderNextWindow(summary) {
+  if (!ui.summaryNextWindow) return;
+  if (!summary) {
+    ui.summaryNextWindow.textContent = '—';
+    return;
+  }
+  const item = [summary?.pi, summary?.ki].find(
+    (window) => window && !window.empty,
+  );
+  ui.summaryNextWindow.textContent = item
+    ? [item.label, item.dateText, item.timeText].filter(Boolean).join(' ')
+    : 'No clean window';
+}
+
 function mainIssueForColumn({
   score,
   wind,
@@ -3425,6 +3469,7 @@ function resetForecastView() {
   if (ui.summaryDirectionDetail) ui.summaryDirectionDetail.textContent = '—';
   if (ui.summaryTideUsability) ui.summaryTideUsability.textContent = '—';
   renderBestWindows(null);
+  renderNextWindow(null);
   if (ui.summaryMainIssue) ui.summaryMainIssue.textContent = '—';
   if (ui.forecastRange) ui.forecastRange.textContent = '—';
 

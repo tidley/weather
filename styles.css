@@ -1270,7 +1270,7 @@ h1::after {
 }
 
 .status-rail {
-  grid-template-columns: minmax(200px, 1.45fr) repeat(4, minmax(130px, 1fr));
+  grid-template-columns: minmax(200px, 1.45fr) repeat(5, minmax(110px, 1fr));
   gap: 0;
   margin-bottom: 12px;
   border: 1px solid var(--line-strong);
@@ -1312,6 +1312,12 @@ h1::after {
   color: #f5f9ff;
   font-size: clamp(1.05rem, 1.45vw, 1.45rem);
   line-height: 1.05;
+}
+
+.status-segment-next-window strong {
+  font-size: 0.9rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .status-segment #summary-overall {
@@ -1994,6 +2000,10 @@ h1::after {
 
   .status-segment strong {
     font-size: 1rem;
+  }
+
+  .status-segment-next-window strong {
+    font-size: 0.75rem;
   }
 
   .status-segment .summary-title,

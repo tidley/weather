@@ -49,7 +49,7 @@
     </header>
 
     <section class="summary-bar status-rail" aria-live="polite">
-      <article class="status-segment" id="decision-band">
+      <article class="status-segment" id="decision-band" tabindex="0">
         <span class="summary-title">Overall</span>
         <strong id="summary-overall">—</strong>
         <span id="summary-ki-score">—</span>
@@ -82,6 +82,11 @@
         <span class="summary-title">Tide</span>
         <strong id="summary-tide-usability">—</strong>
         <span id="summary-tide"><span>—</span></span>
+      </article>
+
+      <article class="status-segment status-segment-next-window">
+        <span class="summary-title">Next window</span>
+        <strong id="summary-next-window">—</strong>
       </article>
 
       <div class="summary-hidden-metrics" aria-hidden="true">
