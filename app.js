@@ -222,6 +222,9 @@ function showTapTooltip(target, text) {
   if (!tapTooltip) return;
   if (tapTooltipTarget && tapTooltipTarget !== target) {
     tapTooltipTarget.removeAttribute('aria-describedby');
+    if (tapTooltipTarget === ui.summaryBand) {
+      tapTooltipTarget.setAttribute('aria-expanded', 'false');
+    }
   }
   tapTooltip.textContent = text;
   tapTooltip.classList.add('visible');
