@@ -2154,6 +2154,10 @@ function summarizeSessionWindows(
   tideRange,
 ) {
   const windowOptions = { horizonDays: BEST_WINDOW_DAYS, limit: 1 };
+  const nextWindowOptions = {
+    horizonDays: BEST_WINDOW_DAYS,
+    limit: columns.length,
+  };
   const kiWindows = bestWindowsForScores(
     columns,
     kiteScores,
@@ -2170,6 +2174,22 @@ function summarizeSessionWindows(
     windowSize,
     windowOptions,
   );
+  const nextKiWindows = bestWindowsForScores(
+    columns,
+    kiteScores,
+    'ki',
+    0.6,
+    windowSize,
+    nextWindowOptions,
+  );
+  const nextPiWindows = bestWindowsForScores(
+    columns,
+    paddleScores,
+    'pi',
+    0.65,
+    windowSize,
+    nextWindowOptions,
+  );
 
   return {
     horizonDays: BEST_WINDOW_DAYS,
@@ -2184,6 +2204,22 @@ function summarizeSessionWindows(
     pi: buildSessionWindowSummary(
       'pi',
       piWindows[0],
+      data,
+      tideSeries,
+      tideRange,
+      windowSize,
+    ),
+    nextKi: buildSessionWindowSummary(
+      'ki',
+      nextKiWindows[0],
+      data,
+      tideSeries,
+      tideRange,
+      windowSize,
+    ),
+    nextPi: buildSessionWindowSummary(
+      'pi',
+      nextPiWindows[0],
       data,
       tideSeries,
       tideRange,
@@ -2273,7 +2309,7 @@ function renderNextWindow(summary) {
     ui.summaryNextWindow.textContent = '—';
     return;
   }
-  const item = [summary?.pi, summary?.ki]
+  const item = [summary?.nextPi, summary?.nextKi]
     .filter((window) => window && !window.empty)
     .sort((a, b) => a.start - b.start)[0];
   ui.summaryNextWindow.textContent = item
@@ -2729,6 +2765,7 @@ function renderTideSegment(svg, tideEvents, windowStart, windowEnd, scale) {
 }
 
 function renderForecast(data, tideEvents) {
+  hideTapTooltip();
   ui.forecastHeadRow.innerHTML = '';
   ui.forecastBody.innerHTML = '';
   const dateLabel = document.createElement('th');
