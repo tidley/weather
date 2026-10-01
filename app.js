@@ -284,17 +284,20 @@ document.querySelectorAll('.meteocons-icon[data-meteocons]').forEach((icon) => {
   renderMeteoconsIcon(icon, icon.dataset.meteocons);
 });
 
-tapTooltip = document.createElement('div');
-tapTooltip.id = 'tap-tooltip';
-tapTooltip.className = 'tap-tooltip';
-tapTooltip.setAttribute('role', 'tooltip');
-tapTooltip.setAttribute('aria-hidden', 'true');
-document.body.appendChild(tapTooltip);
+const tapTooltipsEnabled = shouldEnableTapTooltips();
+if (tapTooltipsEnabled || ui.summaryBand) {
+  tapTooltip = document.createElement('div');
+  tapTooltip.id = 'tap-tooltip';
+  tapTooltip.className = 'tap-tooltip';
+  tapTooltip.setAttribute('role', 'tooltip');
+  tapTooltip.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(tapTooltip);
 
-if (shouldEnableTapTooltips()) {
   document.addEventListener('click', (event) => {
     const target = event.target.closest(
-      '.forecast-grid .label-cell, .forecast-grid .data-cell, .summary-tile, #decision-band',
+      tapTooltipsEnabled
+        ? '.forecast-grid .label-cell, .forecast-grid .data-cell, .summary-tile, #decision-band'
+        : '#decision-band',
     );
     if (!target) {
       hideTapTooltip();
