@@ -1987,9 +1987,39 @@ h1::after {
   }
 
   .status-segment .summary-title {
+    display: none;
+  }
+
+  .status-segment::before {
     flex: 0 0 auto;
-    font-size: 0.6rem;
+    color: #a8bfd6;
+    font-family: var(--mono);
+    font-size: 0.56rem;
     line-height: 1;
+  }
+
+  .status-segment:nth-child(1)::before {
+    content: "KI";
+  }
+
+  .status-segment:nth-child(2)::before {
+    content: "WIND";
+  }
+
+  .status-segment:nth-child(3)::before {
+    content: "GUST";
+  }
+
+  .status-segment:nth-child(4)::before {
+    content: "DIR";
+  }
+
+  .status-segment:nth-child(5)::before {
+    content: "TIDE";
+  }
+
+  .status-segment:nth-child(6)::before {
+    content: "NEXT";
   }
 
   .status-segment strong,
