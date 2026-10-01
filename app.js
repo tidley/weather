@@ -274,7 +274,7 @@ if (shouldEnableTapTooltips()) {
 
   document.addEventListener('click', (event) => {
     const target = event.target.closest(
-      '.forecast-grid .label-cell, .forecast-grid .data-cell, .summary-tile',
+      '.forecast-grid .label-cell, .forecast-grid .data-cell, .summary-tile, .status-segment',
     );
     if (!target) {
       hideTapTooltip();
