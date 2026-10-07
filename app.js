@@ -1,4 +1,4 @@
-console.log('APP.JS VERSION:', '2026-05-24-ota-update-1');
+console.log('APP.JS VERSION:', '2026-06-08-settings-ota');
 
 const DEFAULT_LOCATION_KEY = 'st-leonards';
 
@@ -94,6 +94,9 @@ const ui = {
   tideSource: document.getElementById('tide-source'),
   tideSvg: document.getElementById('tide-svg'),
   refresh: document.getElementById('refresh'),
+  settingsMenu: document.getElementById('settings-menu'),
+  settingsToggle: document.getElementById('settings-toggle'),
+  settingsPanel: document.getElementById('settings-panel'),
   appUpdateButton: document.getElementById('app-update-button'),
   appUpdateStatus: document.getElementById('app-update-status'),
   toggleNight: document.getElementById('toggle-night'),
@@ -216,6 +219,17 @@ function hideTapTooltip() {
   }
   tapTooltipVisible = false;
   tapTooltipTarget = null;
+}
+
+function setSettingsOpen(isOpen) {
+  if (!ui.settingsToggle || !ui.settingsPanel) return;
+  ui.settingsPanel.classList.toggle('hidden', !isOpen);
+  ui.settingsToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function toggleSettingsPanel() {
+  if (!ui.settingsPanel) return;
+  setSettingsOpen(ui.settingsPanel.classList.contains('hidden'));
 }
 
 function showTapTooltip(target, text) {
@@ -3689,9 +3703,9 @@ function showAppUpdateButton(mode, statusText) {
 function hideAppUpdateButton() {
   appUpdateMode = null;
   if (ui.appUpdateButton) {
-    ui.appUpdateButton.classList.add('hidden');
-    ui.appUpdateButton.disabled = true;
-    ui.appUpdateButton.textContent = 'Update';
+    ui.appUpdateButton.classList.remove('hidden');
+    ui.appUpdateButton.disabled = false;
+    ui.appUpdateButton.textContent = 'Check';
   }
 }
 
@@ -3857,7 +3871,7 @@ async function installReleaseUpdate() {
 function installServiceWorkerUpdate() {
   const worker = waitingServiceWorker || serviceWorkerRegistration?.waiting;
   if (!worker) {
-    checkForAppUpdate({ manual: true });
+    checkForUpdatesManually();
     return;
   }
 
@@ -3870,12 +3884,53 @@ function installServiceWorkerUpdate() {
   worker.postMessage({ type: 'SKIP_WAITING' });
 }
 
+async function checkForUpdatesManually() {
+  if (ui.appUpdateButton) {
+    ui.appUpdateButton.disabled = true;
+    ui.appUpdateButton.textContent = 'Checking...';
+  }
+  setAppUpdateStatus('Checking GitHub release...');
+
+  try {
+    const releaseResult = await checkForReleaseUpdate({ silent: true });
+    if (appUpdateMode === 'release') return;
+
+    if (releaseResult?.updateAvailable) {
+      hideAppUpdateButton();
+      const message =
+        releaseResult.zipAvailable && !releaseResult.installEnabled
+          ? 'Update is available, but server install is not configured'
+          : 'Update is available, but the release package is not installable';
+      setAppUpdateStatus(message, true);
+      return;
+    }
+
+    if (serviceWorkerRegistration) {
+      await checkForAppUpdate({ manual: true });
+      return;
+    }
+
+    hideAppUpdateButton();
+    setAppUpdateStatus(releaseResult?.message || 'App is up to date');
+    window.setTimeout(() => setAppUpdateStatus(''), 3000);
+  } finally {
+    if (!appUpdateMode && ui.appUpdateButton) {
+      ui.appUpdateButton.disabled = false;
+      ui.appUpdateButton.textContent = 'Check';
+    }
+  }
+}
+
 function installAppUpdate() {
   if (appUpdateMode === 'release') {
     installReleaseUpdate();
     return;
   }
-  installServiceWorkerUpdate();
+  if (appUpdateMode === 'service-worker') {
+    installServiceWorkerUpdate();
+    return;
+  }
+  checkForUpdatesManually();
 }
 
 function scheduleAppUpdateChecks() {
@@ -3915,7 +3970,7 @@ function registerServiceWorker() {
       serviceWorkerRegistration = registration;
 
       if (registration.waiting && navigator.serviceWorker.controller) {
-        showAppUpdateButton(registration.waiting);
+        showServiceWorkerUpdateButton(registration.waiting);
       }
       watchInstallingServiceWorker(registration.installing);
       registration.addEventListener('updatefound', () => {
@@ -3933,7 +3988,29 @@ function registerServiceWorker() {
 
 if (ui.refresh) {
   ui.refresh.addEventListener('click', () => {
+    setSettingsOpen(false);
     loadForecast({ force: true });
+  });
+}
+
+if (ui.settingsToggle) {
+  ui.settingsToggle.addEventListener('click', (event) => {
+    event.stopPropagation();
+    toggleSettingsPanel();
+  });
+}
+
+if (ui.settingsMenu) {
+  ui.settingsMenu.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+
+  document.addEventListener('click', () => {
+    setSettingsOpen(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setSettingsOpen(false);
   });
 }
 

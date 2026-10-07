@@ -23,8 +23,6 @@
         <p class="summary-updated topbar-updated" id="summary-updated">Weather — · Tides —</p>
       </div>
       <div class="topbar-actions">
-        <span class="ota-status hidden" id="app-update-status" role="status" aria-live="polite"></span>
-        <button class="update-button hidden" id="app-update-button" type="button">Update</button>
         <div
           class="location-toggle"
           role="radiogroup"
@@ -44,11 +42,48 @@
             <span>Hayle</span>
           </label>
         </div>
-        <button class="icon-button" id="refresh" type="button" aria-label="Refresh forecast" title="Refresh forecast">⚙</button>
+        <div class="settings-menu" id="settings-menu">
+          <button
+            class="icon-button settings-toggle"
+            id="settings-toggle"
+            type="button"
+            aria-label="Settings"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="settings-panel"
+            title="Settings"
+          >⚙</button>
+          <div
+            class="settings-panel hidden"
+            id="settings-panel"
+            role="dialog"
+            aria-labelledby="settings-title"
+          >
+            <div class="settings-panel-header">
+              <span class="settings-title" id="settings-title">Settings</span>
+            </div>
+            <div class="settings-item">
+              <span class="settings-item-label">Forecast</span>
+              <button class="settings-action-button" id="refresh" type="button">Refresh</button>
+            </div>
+            <div class="settings-item settings-item-ota">
+              <div class="settings-item-copy">
+                <span class="settings-item-label">OTA update</span>
+                <span
+                  class="ota-status hidden"
+                  id="app-update-status"
+                  role="status"
+                  aria-live="polite"
+                ></span>
+              </div>
+              <button class="update-button" id="app-update-button" type="button">Check</button>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 
-    <section class="summary-bar status-rail" aria-live="polite">
+    <section class="summary-bar status-rail" aria-live="polite" aria-label="Forecast status" tabindex="0">
       <article
         class="status-segment"
         id="decision-band"
