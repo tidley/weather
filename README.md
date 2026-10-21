@@ -14,6 +14,36 @@ Simple weather dashboard aimed at quick kitesurfing checks for St Leonards and H
 - Location toggle for St Leonards and Hayle.
 - Compact summary tile at the top with overall verdict, wind/gusts/direction/temp, waves/tide/rain, and reason chips.
 
+## PHP runtime security
+
+Use a PHP build patched for **CVE-2026-109618** and **CVE-2026-109619**.
+The upstream fixed releases are **8.2.35**, **8.3.36**, **8.4.27**, and
+**8.5.12**. Use the latest patched release in your supported branch. If your
+hosting provider backports security fixes, confirm that its build includes both
+fixes rather than relying only on the displayed version number.
+
+Release validation uses PHP **8.4.27**. The distribution contains application
+files only: installing `weather.zip` through the online updater does **not**
+upgrade PHP on the server.
+
+For control-panel hosting:
+
+1. Open the hosting provider's PHP version manager for `kiting.tomdwyer.uk`.
+2. Select a patched PHP build. PHP 8.4.27 or a later 8.4 release is suitable.
+3. Apply the change and restart PHP workers through the panel, or ask the
+   provider to restart them.
+4. Confirm the web runtime's version and patch status in the panel. The local
+   CLI version is not evidence of the version serving the website.
+5. Check the forecast, tide and wave endpoints, and the online updater.
+
+If no patched build is available, contact the hosting provider. Application
+updates cannot fix these PHP engine vulnerabilities.
+
+References:
+- [NCSC alert](https://www.ncsc.gov.uk/news/critical-security-issue-affecting-php)
+- [PHP OOM advisory](https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w)
+- [PHP stale-state advisory](https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp)
+
 ## Run it (recommended)
 
 Serve the folder with PHP so the proxy endpoints work:
