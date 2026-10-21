@@ -10,7 +10,7 @@ rm -rf "$BUILD_DIR" build/weather.zip
 mkdir -p "$BUILD_DIR"
 
 cp .env.example "$BUILD_DIR/"
-cp .htaccess README.md "$BUILD_DIR/"
+cp README.md "$BUILD_DIR/"
 cp index.html app.js styles.css sw.js "$BUILD_DIR/"
 cp manifest.json manifest.webmanifest favicon.ico "$BUILD_DIR/"
 cp version.php updater.php weather.php waves.php tides.php "$BUILD_DIR/"

@@ -3705,7 +3705,7 @@ function hideAppUpdateButton() {
   if (ui.appUpdateButton) {
     ui.appUpdateButton.classList.remove('hidden');
     ui.appUpdateButton.disabled = false;
-    ui.appUpdateButton.textContent = 'Check';
+    ui.appUpdateButton.textContent = 'Update';
   }
 }
 
@@ -3916,12 +3916,13 @@ async function checkForUpdatesManually() {
   } finally {
     if (!appUpdateMode && ui.appUpdateButton) {
       ui.appUpdateButton.disabled = false;
-      ui.appUpdateButton.textContent = 'Check';
+      ui.appUpdateButton.textContent = 'Update';
     }
   }
 }
 
 function installAppUpdate() {
+  setSettingsOpen(true);
   if (appUpdateMode === 'release') {
     installReleaseUpdate();
     return;
@@ -4015,7 +4016,10 @@ if (ui.settingsMenu) {
 }
 
 if (ui.appUpdateButton) {
-  ui.appUpdateButton.addEventListener('click', installAppUpdate);
+  ui.appUpdateButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    installAppUpdate();
+  });
 }
 
 if (ui.toggleNight) {

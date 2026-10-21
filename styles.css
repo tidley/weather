@@ -2415,6 +2415,13 @@ h1::after {
     align-items: center;
   }
 
+  .topbar-actions > .update-button {
+    align-self: center;
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 0.75rem;
+  }
+
   .location-toggle {
     flex: 0 1 auto;
     padding: 2px;
